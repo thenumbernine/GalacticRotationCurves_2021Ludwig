@@ -5,13 +5,14 @@ local table = require 'ext.table'
 local gnuplot = require 'gnuplot'
 local matrix = require 'matrix'
 local symmath = require 'symmath'
-
+local J1 = require 'J1'
 
 local Gstorage = {}
 setmetatable(_G, {
 	__newindex = function(...)
 		local t, k, v = ...
 		local oldv = Gstorage[k]
+--		print(debug.traceback())
 		print(tostring(k)..' = '..tostring(v)..(oldv ~= nil and oldv ~= v and (' (from '..oldv..')') or ''))
 		Gstorage[k] = v
 	end,
@@ -23,18 +24,32 @@ setmetatable(_G, {
 local Msun = 1.9891e+30	-- kg 
 -- wikipedia:
 --Msun = 1.98847e+30	-- kg
+print('Msun = '..Msun)
 
 -- Appendix D, after eqn D11
 local Lsun = 3.828e+26 	-- W
 -- wikipedia:
 --Lsun = 3.828e+26	-- W
+print('Lsun = '..Lsun)
 
 -- mass-to-light ratio
 local UpsilonSun = Msun / Lsun	-- kg / W ~ wikipedia: 5133 kg / W
 
 -- me
 local m_in_pc = 648000 / math.pi * 149597870700
+print('m_in_pc = '..m_in_pc)
 
+-- gravitational "constant":
+local G_in_m3_per_kg_s2 = 6.67384e-11
+print('G_in_m3_per_kg_s2 = '..G_in_m3_per_kg_s2)
+
+-- speed of light:
+local c_in_m_per_s = 299792458
+print('c_in_m_per_s = '..c_in_m_per_s)
+
+-- natural unit proportionality between kilograms and meters:
+local G_over_c2_in_m_per_kg = G_in_m3_per_kg_s2 / (c_in_m_per_s * c_in_m_per_s)
+print('G_over_c2_in_m_per_kg = '..G_over_c2_in_m_per_kg)
 
 local n = 1000
 local xvec = matrix{n}:lambda(function(i) return (i-1)/(n-1) end)	-- [0,1] cell-centered
@@ -453,12 +468,26 @@ gnuplot{
 }
 
 
+-- R0's def:
+-- in the text after eqn 4.5
+-- and in the text after eqn C.3
+R0_in_kpc = 1 -- kpc
+R0_in_m = R0_in_kpc * 1000 * m_in_pc
+
+-- eqn C.8: rs = 2 * G * M / (c^2 * R0)
+-- notice, typically the Schwarzschild radius rs is defined as rs = 2 M * G / c^2 ... 
+-- ... so where does this R0 come into play?
+local function rs_eqn_C_8()
+	return 2 * G_over_c2_in_m_per_kg * M / R0_in_m
+end
+
+
 
 M = 1.52e+10 * Msun -- kg
 lambda = 0.134
 rho0 = 3.31e-20	-- kg/m^3
 l = 3
-rs = 1.46e-6	-- kpc
+rs = 1.46e-6	-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
 a = 7.19		-- kpc
 b = 0.567		-- kpc
 rmax = 12.2		-- kpc
@@ -469,11 +498,15 @@ alphamax = alpha_for_r_d(rmax, d)
 -- which is the furthest distance specified in the figure 3 subtext.
 
 
-
 -- eqn C5: lambda = 4 pi R0^3 rho0 / (3 M)
-R0 = (3 * M * lambda / (4 * math.pi * rho0)) ^ (1/3) / m_in_pc / 1000	-- kpc
--- R0 = 3.08008569838469e+19 m
--- R0 = 9.98187794103888e-01 kpc
+R0_in_m_check = (3 * M * lambda / (4 * math.pi * rho0)) ^ (1/3) 	-- m
+-- R0_in_m_check = 3.08008569838469e+19
+R0_in_kpc_check = R0_in_m_check / m_in_pc / 1000	-- kpc
+-- R0_in_kpc_check = 9.98187794103888e-01 kpc
+-- very close to the paper's stated R0 = 1 kpc
+
+rs_check = rs_eqn_C_8()
+-- 1.4551710314407e-06 ... close to 1.46e-6
 
 -- eqn C4
 -- using the substitution of eqn C5 to replace R0 with lambda
@@ -529,6 +562,176 @@ gnuplot{
 }
 -- FAIL. this looks incorrect.
 
+-- TODO rotation curve
+
+
+-- equation C9
+print("deriving root-finding")
+local galacticWidth_for_r_eqn_C_9 
+do -- let the newton func and deriv exist in this scope
+	local f, df_ddelta 
+	local f_lhs, f_rhs
+	do	-- use symmath vars in this scope
+		symmath.fixVariableNames = true
+		local frac = symmath.frac
+		local sqrt = symmath.sqrt
+		local exp = symmath.exp
+		-- these are in the same order the arguments are provided in the compiled function
+		local vars = table{symmath.vars('delta', 'r', 'a', 'b', 'l', 'lambda')}
+		local delta, r, a, b, l, lambda = vars:unpack()
+		local widthEqLhs = (
+				b^2 
+				* (a * r^2 + (a + 3 * sqrt(b^2 + delta^2))) 
+				* (a + sqrt(b^2 + delta^2))^2
+			) / (
+				3 
+				* (r^2 + (a + sqrt(b^2 + delta^2))^2)^frac(5,2) 
+				* (b^2 + delta^2)^frac(3,2)
+			)
+		local widthEqRhs = lambda * exp(-l^2 / 2)
+		local widthExpr = widthEqLhs - widthEqRhs
+		
+		symmath.tostring = symmath.export.SingleLine
+		print(widthExpr)
+	
+		--[[ hmm, too bloated
+		symmath.op.div:pushRule'Prune/conjOfSqrtInDenom'
+		symmath.op.div:pushRule'Factor/polydiv'
+		symmath.op.mul:pushRule'Prune/logPow'
+		symmath.op.pow:pushRule'Expand/integerPower'
+		symmath.op.pow:pushRule'Expand/expandMulOfLikePow'	
+		local dWidthExpr = widthExpr:diff(delta)()
+		--]]
+		-- [[ much better
+		local function applyDiff(x)
+			-- TODO - this is commented out in Variable because it is also duplciated in Derivative's prune() rule ...
+			if symmath.Variable:isa(x) then return x == delta and 1 or 0 end
+			return x:evaluateDerivative(applyDiff, delta)
+		end
+		local dWidthExpr = applyDiff(widthExpr):prune()
+		--]]
+		print(dWidthExpr)
+		
+		f_lhs = symmath.export.Lua:toFunc{output={widthEqLhs}, input=vars}
+		f_rhs = symmath.export.Lua:toFunc{output={widthEqRhs}, input=vars}
+		f = symmath.export.Lua:toFunc{output={widthExpr}, input=vars}
+		df_ddelta = symmath.export.Lua:toFunc{output={dWidthExpr}, input=vars}
+	end	
+	local r = 1
+print('a = '..a)
+print('b = '..b)
+print('l = '..l)
+print('lambda = '..lambda)
+	local deltavec = xvec
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "NGC_1560_eqn_C9_f_lhs_rhs.svg",
+		style = 'data lines',
+		xlabel = "δ (kpc)",
+		title = 'f eqn lhs & rhs for root finding delta ',
+		data = {
+			deltavec,
+			deltavec:map(function(delta)
+				return f_lhs(delta, r, a, b, l, lambda)
+			end),
+			deltavec:map(function(delta)
+				return f_rhs(delta, r, a, b, l, lambda)
+			end),
+		},
+		{using='1:2', title='lhs'},
+		{using='1:3', title='rhs'},
+	}
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "NGC_1560_eqn_C9_f.svg",
+		style = 'data lines',
+		xlabel = "δ (kpc)",
+		title = 'f for root finding delta ',
+		data = {
+			deltavec,
+			deltavec:map(function(delta)
+				return f(delta, r, a, b, l, lambda)
+			end),
+		},
+		{using='1:2', title=''},
+	}
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "NGC_1560_eqn_C9_df.svg",
+		style = 'data lines',
+		xlabel = "δ (kpc)",
+		title = 'df for root finding delta ',
+		data = {
+			deltavec,
+			deltavec:map(function(delta)
+				return df_ddelta(delta, r, a, b, l, lambda)
+			end),
+		},
+		{using='1:2', title=''},
+	}
+os.exit()
+	galacticWidth_for_r_eqn_C_9 = function(r)
+		print('for r = '..r)
+		local delta = 1
+		-- newton method
+		while true do
+			local f_val = f(delta, r, a, b, l, lambda)
+			local df_ddelta_val = df_ddelta(delta, r, a, b, l, lambda)
+			local ddelta = -f_val / df_ddelta_val
+			if math.abs(ddelta) < 1e-7 then break end 
+			delta = delta + ddelta
+			print(
+				'f = '..f_val
+				..' df_ddelta = '..df_ddelta_val
+				..' ddelta = '..ddelta
+				..' delta = '..delta
+			)
+		end
+		return delta
+	end
+end
+
+local rvec = xvec * rmax
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_1560_galactic_width_eqn_C9.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	ylabel = "δ (kpc)",
+	title = 'Galactic width of NGC 1560',
+	data = {rvec, rvec:map(galacticWidth_for_r_eqn_C_9)},
+	{using='1:2', title=''},
+}
+
+-- equation C.2
+-- where A, B, R, Z are normalized somehow
+local function phi_for_R_Z_eqn_C_2(R,Z)
+	return -G_in_m3_per_kg_s2 * M / math.sqrt(R*R + (A + math.sqrt(B * B + Z * Z))^2)
+end
+
+--[[
+equation C.7
+φ = ϕ/c^2 ... WHY DO YOU HAVE TO USE TWO DIFFERENT PHIS!?!?!?!?
+r, rs, a, b, z are in kpc ... or equivalently normalized by R0 = 1 kpc ...
+--]]
+local function normphi_for_r_z_eqn_C_7(r,z)
+	return -rs / (2 * math.sqrt(r*r + (a + math.sqrt(b*b + z*z))^2))
+end
+local function normphi_for_r_z_eq_0_eqn_C_7(r)
+	return normphi_for_r_z_eqn_C_7(r,0)
+end
+
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_1560_gravitational_potential_eqn_C7.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	format = {y = '%.2e'},
+	title = 'Gravitational potential of NGC 1560',
+	data = {rvec, rvec:map(normphi_for_r_z_eq_0_eqn_C_7)},
+	{using='1:2', title=''},
+}
+-- looks wrong.
 
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
 print[[
@@ -677,7 +880,7 @@ local function normrho_z_eq_0_eqn_8_4(r)
 	-- "where s(r) is the Sérsic profile adjusted to the luminosity:"
 end
 
-rs = 1.20e-5		-- kpc
+rs = 1.20e-5		-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
 
 -- used for normrho_eqn_C_4
 a = 9.10			-- kpc - major radius bulge
@@ -760,11 +963,16 @@ gnuplot{
 	{using='1:2', title=''},
 }
 
+--[[
+TODOOOO THIS IS NEVER GIVEN!!!!!!
+HOW CAN I REPRODUCE THIS GRAPH?!
+--]]
 local function v_for_r(r)
 	
 end
 
 local rvec = xvec * rmax
+--[=[
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "NGC_3198_normalized_rotation_curve.svg",
@@ -776,3 +984,78 @@ gnuplot{
 	data = {rvec, rvec:map(v_for_r)},
 	{using='1:2', title=''},
 }
+--]=]
+
+
+
+--[[
+going through sources
+2006 Cooperstock et al
+
+Figure 1
+eqn 17:
+Phi = sum_n Cn exp(-kn |z|) J_0(kn r)
+V = -c sum_n Cn kn exp(-kn |z|) J1(kn r)
+
+eqn 14:
+V = c N / r = c dPhi/dr
+so if this 2021 Ludwig paper changes its Phi def, maybe we can use V = c dPhi/dr ?
+
+−Cn kn			kn
+0.00093352334660 0.07515079869
+0.00020761839560 0.17250244090
+0.00022878035710 0.27042899730
+0.00009325578799 0.3684854512
+0.00007945062639 0.4665911784
+0.00006081834319 0.5647207491
+0.00003242780880 0.6628636447
+0.00003006457058 0.7610147353
+0.00001687931928 0.8591712228
+0.00003651365250 0.9573314522
+Table 3: Curve-fitted coefficients for NGC 3198
+
+finally an organized paper
+--]]
+local function v_for_r(r)
+	local sum = 0
+	for _,coeff in ipairs{
+		{0.00093352334660, 0.07515079869},
+		{0.00020761839560, 0.17250244090},
+		{0.00022878035710, 0.27042899730},
+		{0.00009325578799, 0.3684854512},
+		{0.00007945062639, 0.4665911784},
+		{0.00006081834319, 0.5647207491},
+		{0.00003242780880, 0.6628636447},
+		{0.00003006457058, 0.7610147353},
+		{0.00001687931928, 0.8591712228},
+		{0.00003651365250, 0.9573314522},
+	} do
+		local neg_Cn_kn, kn = table.unpack(coeff)
+		sum = sum + neg_Cn_kn * J1(kn * r)
+	end
+	-- the eqn says times speed of light, but 2021 Ludwig graphs v/c = Lorentz beta
+	-- but for reproducing 2006 Cooperstock et al, return beta*c = v
+	return c_in_m_per_s * sum
+end
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_3198_normalized_rotation_curve_2006_Cooperstock_Fig_3.svg",
+	xlabel = "r (kpc)",
+	ylabel = "v",
+	style = 'data lines',
+	title = 'Normalized rotation curve of NGC 3198',
+	xrange = {0, rmax},
+	data = {rvec, rvec:map(v_for_r) / c_in_m_per_s},
+	{using='1:2', title=''},
+}
+--[[
+CHECK
+it looks just like the 2006 Cooperstock et al paper
+but this graph doesnt' look like the 2021 Ludwig paper
+--]]
+
+--[[
+hmm, where's the equation for delta(r)?
+-- all I seem to find are equalities using delta(r) ... so then you solve the nonlinear equation?
+-- 6.9, C14 ...
+--]]
