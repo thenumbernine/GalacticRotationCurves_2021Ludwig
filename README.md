@@ -10,15 +10,15 @@ I was able to reproduce the Section 7 Luminosity profile picture using the Appen
 
 The Section 7 description of the Luminosity profile doesn't seem to match the Section 7 graph.
 
-I haven't been able to reproduce the Sersic index. 
+I haven't been able to reproduce the Sersic index.
 
-I haven't been able to reproduce the normalized mass density. 
+I reproduced the normalized mass density with eqn D 12 b.
 
 And nowhere in the whole fucking paper is there a formula for the rotation curve, so I don't know where he came up with that graph. 
 
-Haven't tried at the galactic width.  Can't find the function in the paper, only hints at numerically solving a PDE description of the width.
+Haven't been able to reproduce the galactic width.  Only root finding function, and I can't get the roots to overlap.
 
-Haven't tried at the gravitational potential.
+Haven't been able to reproduce the gravitational potential.
 
 
 ### NGC 3198 ###
@@ -33,6 +33,6 @@ I was able to reproduce the normalized mass density.
 
 Once again I couldn't find the description of the rotation curve.  I did go back to the cited 2006 Cooperstock et al paper which includes samples as well as its own rotation curve function and was able to reproduce that papers' graph, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
 
-Haven't found a galactic width function in the paper.  I didn't see any galactic width function in the 2006 Cooperstock paper as well.
+Haven't been able to reproduce the galactic width function.
 
-Haven't tried the gravitational potential.
+Haven't been able to reproduce the gravitational potential.

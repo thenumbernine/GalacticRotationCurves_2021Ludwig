@@ -2,6 +2,8 @@
 
 local range = require 'ext.range'
 local table = require 'ext.table'
+local timer = require 'ext.timer'
+local math = require 'ext.math'
 local gnuplot = require 'gnuplot'
 local matrix = require 'matrix'
 local symmath = require 'symmath'
@@ -52,8 +54,7 @@ local G_over_c2_in_m_per_kg = G_in_m3_per_kg_s2 / (c_in_m_per_s * c_in_m_per_s)
 print('G_over_c2_in_m_per_kg = '..G_over_c2_in_m_per_kg)
 
 local n = 1000
-local xvec = matrix{n}:lambda(function(i) return (i-1)/(n-1) end)	-- [0,1] cell-centered
-
+local xvec = matrix{n}:lambda(function(i) return (i-1)/(n-1) end)	-- [0,1] edge coords
 
 -- assumes xvec has values from 0 to 1
 local function makePow10Range(rmin, rmax)
@@ -169,9 +170,9 @@ local function s_for_alpha_eqn_D_13(alpha)
 end
 
 
--- eqn D18
+-- eqn D.18.a
 -- evaluate b1 according to se, s0, alphae, alpha0, b2 ... bn, d3 ... dn
-local function b1_eqn_D_18()
+local function b1_eqn_D_18_a()
 	return 1 / (alphae + alpha0) * (
 		2 * (se - s0)
 		- range(2,bPolyOrder):mapi(function(i)
@@ -183,7 +184,9 @@ local function b1_eqn_D_18()
 	)
 end
 
-local function d2_eqn_D_18()
+-- eqn D.18.b
+-- evaluate d2 according to the same
+local function d2_eqn_D_18_b()
 	return -1 / (alphae * alphae - alpha0 * alpha0) * ( 
 		se - s0
 		+ range(2,bPolyOrder):mapi(function(i)
@@ -194,6 +197,106 @@ local function d2_eqn_D_18()
 		end):sum()
 	)
 end
+
+-- eqn D.20
+local function se_eqn_D_20(mu_for_alpha_fn)
+	return math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_fn(alphae) - mu0))	
+end
+
+-- equation C.2
+-- where A, B, R, Z are normalized somehow
+-- I'm not using this one at the moment
+local function phi_for_R_Z_eqn_C_2(R,Z)
+	return -G_in_m3_per_kg_s2 * M / math.sqrt(R*R + (A + math.sqrt(B * B + Z * Z))^2)
+end
+
+--[[
+equation 5.2.a
+also equation C.7
+φ = ϕ/c^2 ... WHY DO YOU HAVE TO USE TWO DIFFERENT PHIS!?!?!?!?
+r, rs, a, b, z are in kpc ... or equivalently normalized by R0 = 1 kpc ...
+--]]
+local function normphi_for_r_z_eqn_5_2_a(r,z)
+	return -rs / (2 * math.sqrt(r*r + (a + math.sqrt(b*b + z*z))^2))
+end
+local function normphi_for_r_z_eq_0_eqn_5_2_a(r)
+	return normphi_for_r_z_eqn_5_2_a(r,0)
+end
+
+-- eqn 8.2
+local function r_for_i(i)
+	-- 'i' is the index, right? the subscript of 'i' right? and not the imaginary unit *and* the denotation of r ...
+	return rspiral * math.exp(2 * math.pi * i * kspiral)
+end
+
+-- eqn 8.3
+local function y_for_i(i)
+	-- to the v?  or is that a reference? what is v?
+	-- why does the eqn say exp(...)^v and not exp(v * ...) ?
+	return y0 * math.exp(2 * math.pi * i * kspiral * v)
+end
+
+-- eqn 8.1
+local function Y_eqn_8_1(r)
+	local sum = 1
+	for i=0,4 do
+-- I guess this is the constant they provided?
+--		local gammai = gamma_for_i(i)
+		sum = sum + (y_for_i(i) * gammai / math.pi) / ((r - r_for_i(i))^2 + gammai ^2)
+	end
+	return sum
+end
+
+-- eqn 8.5
+-- basically same as S(alpha) from eqn D13, but with (r, r0, re) swapped with (alpha, alpha0, alphae)
+local function s_for_r_eqn_8_5(r)
+	--[[ 
+	-- since r and alpha are linear, can we just do this? 
+	-- no.  
+	-- the coefficient of difference will scale with the polynomials ...
+	if r <= r0 then
+		return sb_for_alpha_eqn_D_17(r)
+	end
+	if r <= re then
+		return sd_for_alpha_eqn_D_17(r)
+	end
+	return se
+	--]]
+	-- [[ convert to alpha and evaluate accordingly
+	local alpha = alpha_for_r_d(r, d)
+	return s_for_alpha_eqn_D_13(alpha)
+	--]]
+end
+
+-- eqn 8.4
+-- ... has both these equations ... and they aren't even equal ... smh
+local function normrho_z_eq_0_eqn_8_4(r)
+	--[[ can't do this without s1 and s1 of the galaxy being defined ... which it is not for NGC 3198
+	local alpha = alpha_for_r_d(r, d)
+	return Y_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))
+	--]]
+	-- [[ looks good
+	return 
+		Y_eqn_8_1(r) 
+		* math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
+	--]]
+	-- "where s(r) is the Sérsic profile adjusted to the luminosity:"
+end
+
+-- eqn D8, doesn't require alpha1 (derived from r1) or alpha0 (derived from r0) or s2, like eqn D11 requires
+-- but what is "s" ?
+-- after eqn D1: "where s is the Sersic index"
+-- but this 's' varies with alpha ... correct?
+local function mu_for_alpha_eqn_D_8(alpha)
+	local s = s_for_alpha_eqn_D_13(alpha)
+	return mu0 + 5 / (2 * math.log(10)) * (alpha / alphaeff) ^ (1 / s)
+end
+
+local function normrho_for_r_z_eq_0_eqn_9_1(r)
+	local alpha = alpha_for_r_d(r, d)
+	return Y_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
+end
+
 
 
 
@@ -239,7 +342,8 @@ r1 = d * (math.pi / (180 * 3600)) * alpha1	-- r1 = 0.001440623853417 ...
 
 
 -- eqn D11:
-local function mu_eqn_D_11(alpha) 
+-- depends on s1, s2, which we only have for NGC 1560 (right?)
+local function mu_for_alpha_eqn_D_11(alpha) 
 	return mu0 + (
 		alpha < alpha0
 		and 5 / (2 * math.log(10)) * (alpha / alpha1) ^ (1 / s1)
@@ -268,7 +372,7 @@ gnuplot{
 	title = "Luminosity profile of NGC 1560",
 	xrange = {0, alphae},
 	yrange = {[3] = 'reverse'},
-	data = {alphavec, alphavec:map(mu_eqn_D_11)},
+	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_11)},
 	{using='1:2', title=''}, 
 }
 
@@ -358,6 +462,7 @@ soooo ...
 it looks like the paper is reassigning the values of its d_i's without specifying it ...
 yeah sure enough, recentering a polynomial changes its coefficients, though the paper acts like the coefficients will stay the same ...
 --]]
+--[[ FAIL - inflection too far right, the value raises too high (low on the flipped graph ... why is the graph flipped in the paper?!?!?!)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
@@ -367,12 +472,13 @@ gnuplot{
 	title = "Luminosity profile of NGC 1560",
 	xrange = {0, alphae},
 	yrange = {[3] = 'reverse'},
-	data = {alphavec, alphavec:map(mu_eqn_D_11)},
+	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_11)},
 	{using='1:2', title=''}, 
 }
+--]]
 -- does eqn D20 match up with se's definition in section 7?
 -- eqn D20
-se_check = math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_eqn_D_11(alphae) - mu0))	
+se_check = se_eqn_D_20(mu_for_alpha_eqn_D_11)
 -- using the section 7 alpha0: se_check = 0.49270654394305
 -- using the Appendix D alpha0: se_check = 0.88439918653437 ... which matches section 7
 -- ... WHY DOESN'T THE SECTION 7 ALPHAE MATCH THE SECTION 7 SE?!?!?!?
@@ -382,13 +488,13 @@ se_check = math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_eqn
 se = se_check
 
 -- how about eqn D18 vs b1 and d2 in section 7?
-b1_check = b1_eqn_D_18()
+b1_check = b1_eqn_D_18_a()
 -- b1_check = 0.00091103173224744 ... wrong.  half of the given value.
 -- and if we change the denom from 1 / (alphae + alpha0) to 1 / (alphae - alpha0) ... it gets a bit closer ... 
 -- b1_check = 0.0021128911777981 ... close
 --b1 = b1_check
 
-d2_check = d2_eqn_D_18()
+d2_check = d2_eqn_D_18_b()
 -- d2_check = 4.2717212743056e-07
 -- ... and this is at least close 
 -- one order off ...
@@ -453,7 +559,7 @@ gnuplot{
 -- how about using D19
 local function S_eqn_D_19(alpha) 
 	-- eqn D19 ... looks bad
-	return math.log(alpha / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_eqn_D_11(alpha) - mu0))	
+	return math.log(alpha / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))	
 end
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -471,16 +577,22 @@ gnuplot{
 -- R0's def:
 -- in the text after eqn 4.5
 -- and in the text after eqn C.3
-R0_in_kpc = 1 -- kpc
-R0_in_m = R0_in_kpc * 1000 * m_in_pc
+local R0_in_kpc = 1 -- kpc
+local R0_in_m = R0_in_kpc * 1000 * m_in_pc
 
--- eqn C.8: rs = 2 * G * M / (c^2 * R0)
+-- eqn 4.9.a
+-- also eqn C.8
+-- rs = 2 * G * M / (c^2 * R0)
 -- notice, typically the Schwarzschild radius rs is defined as rs = 2 M * G / c^2 ... 
 -- ... so where does this R0 come into play?
-local function rs_eqn_C_8()
+local function rs_eqn_4_9_a()
 	return 2 * G_over_c2_in_m_per_kg * M / R0_in_m
 end
 
+-- assuming rho0 is in kg/m^3 ... means we need to use R0_in_m^3 ... and M is in kg ...
+local function lambda_eqn_4_9_b()
+	return (4/3) * math.pi * R0_in_m^3 * rho0 / M
+end
 
 
 M = 1.52e+10 * Msun -- kg
@@ -505,28 +617,111 @@ R0_in_kpc_check = R0_in_m_check / m_in_pc / 1000	-- kpc
 -- R0_in_kpc_check = 9.98187794103888e-01 kpc
 -- very close to the paper's stated R0 = 1 kpc
 
-rs_check = rs_eqn_C_8()
--- 1.4551710314407e-06 ... close to 1.46e-6
+rs_check = rs_eqn_4_9_a()
+-- rs_check = 1.4551710314407e-06 ... close to 1.46e-6
 
--- eqn C4
--- using the substitution of eqn C5 to replace R0 with lambda
-local function normrho_eqn_C_4(r,z) 
-	return 1 / lambda * (
-		(b*b * (
-			a * r*r
-			+ (a + 3 * math.sqrt(b*b + z*z))
-			* (a + math.sqrt(b*b + z*z))
-			* (a + math.sqrt(b*b + z*z))
-		))
-		/ (
-			3
-			* (r*r + (a + math.sqrt(b*b + z*z)) * (a + math.sqrt(b*b + z*z))) ^ (5/2)
-			* (b*b + z*z) ^ (3/2)
-		)
-	)
-end
-local function normrho_z_eq_0_eqn_C_4(r)
-	return normrho_eqn_C_4(r,0)
+lambda_check = lambda_eqn_4_9_b()
+-- lambda_check = 0.13473115517544 ... close to 0.134
+
+-- expressions ... putting all in one place so the symbolic vars will be too
+local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
+local eqn_C_9_root_expr_based_on_5_2_b, dz_eqn_C_9_root_expr_based_on_5_2_b	-- internal to the newton root-finder
+local galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b
+local eqn_C_9_rhs_over_lambda		-- purely for debugging
+timer("deriving root-finding", function()
+	-- let the newton func and deriv exist in this scope
+	do	-- use symmath vars in this scope
+		symmath.fixVariableNames = true
+		symmath.tostring = symmath.export.SingleLine
+		local Constant = symmath.Constant
+		local frac = symmath.frac
+		local sqrt = symmath.sqrt
+		local exp = symmath.exp
+		-- these are in the same order the arguments are provided in the compiled function
+		local argvars = table{symmath.vars('r', 'z')}
+		local r, z = argvars:unpack()
+		-- globals:
+		local a, b, l, lambda, mu0 = symmath.vars('a', 'b', 'l', 'lambda', 'mu0')
+	
+		-- normalized density
+		-- eqn 5.2.b
+		-- also eqn C.4 but with lambda's definition of C.5 substituted
+		local tmp = sqrt(b*b + z*z)
+		local normrho_eqn_5_2_b_expr = 
+			(b*b / (3 * lambda)) * (
+				a*r*r 
+				+ (a + 3 * tmp) * (a + tmp)^2
+			) / (
+				(r*r + (a + tmp)^2)^frac(5,2)
+				* tmp^3
+			)
+
+--[[ TODO
+		local mu_for_alpha_eqn_D_11_expr = 
+
+		-- eqn D.12
+		local normrho_eqn_D_12_a_expr = 10 ^ (frac(-2, 5) * (mu_for_alpha_eqn_D_11_expr - mu0))
+--]]
+
+		-- eqn C.9 
+		-- uses a normalized density function based on eqn C.4
+		local eqn_C_9_rhs_over_lambda_expr = exp(-l^2 / 2)
+
+		-- TODO eqn C.9 modified with a normalized density function based on eqn D.12
+
+
+		local eqn_C_9_root_expr_based_onn_5_2_b_expr = normrho_eqn_5_2_b_expr - eqn_C_9_rhs_over_lambda_expr
+		print(eqn_C_9_root_expr_based_onn_5_2_b_expr)
+	
+		-- TODO - Variable evaluateDerivative is commented out in Variable because it is also duplciated in Derivative's prune() rule ...
+		
+		local dz_eqn_C_9_root_expr = eqn_C_9_root_expr_based_onn_5_2_b_expr:diff(z):prune()
+		print(dz_eqn_C_9_root_expr)
+		
+		-- assert d/dx rhs == 0, 
+		-- such that if width = width_lhs - width_rhs then d/dz (width) == d/dz (width_lhs)
+		assert(Constant.isValue(eqn_C_9_rhs_over_lambda_expr:diff(z):prune(), 0))
+		
+		-- eqn C.4
+		-- using the substitution of eqn C5 to replace R0 with lambda
+		-- ok in eqn C 9 the z is replaced with "delta(z)" ... but delta is really just z. .. and they are solving for z and callign that variable "delta"
+		normrho_for_r_z_eqn_5_2_b = symmath.export.Lua:toFunc{output={normrho_eqn_5_2_b_expr}, input=argvars}
+		
+		eqn_C_9_rhs_over_lambda = symmath.export.Lua:toFunc{output={eqn_C_9_rhs_over_lambda_expr}, input=argvars}
+		eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={eqn_C_9_root_expr_based_onn_5_2_b_expr}, input=argvars}
+		dz_eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_C_9_root_expr}, input=argvars}
+	end	
+
+	
+	-- equation C9
+	-- this is solving the nonlinear equation normrho(r,z) = exp(-1/2 l^2) for z, for fixed z
+	galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b = function(r)
+--print('for r = '..r)
+		local z = 1
+		-- newton method
+		local maxiter = 100
+		for iter=1,maxiter do
+			local f_val = eqn_C_9_root_expr_based_on_5_2_b(r, z)
+			local df_dz_val = dz_eqn_C_9_root_expr_based_on_5_2_b(r, z)
+			local dz = -f_val / df_dz_val
+			if math.abs(dz) < 1e-7 then break end 
+			z = z + dz
+--[[
+			print(
+				'f = '..f_val
+				..' df_dz = '..df_dz_val
+				..' dz = '..dz
+				..' z = '..z
+			)
+--]]		
+			if iter == maxiter then return math.nan end
+		end
+		return z
+	end
+end)
+
+local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
+	return normrho_for_r_z_eqn_5_2_b(r,0)
 end
 
 -- Appendix D, after eqn D12
@@ -537,189 +732,142 @@ end
 r0_check = r_for_d_alpha(d, alpha0)
 
 r1 = r_for_d_alpha(d, alpha1)
+
 -- eqn D12
 -- depends upon s1 and s2 to be defined
 -- and those are only defined for NGC 1560 in Appendix D
-local function normrho_z_eq_0_eqn_D_12(r) 
-	return 10 ^ ((-2/5) * (mu_eqn_D_11(r) - mu0)) * (
-		r <= r0
-		and math.exp(-(r / r1) ^ (1 / s1))
-		or math.exp(-(r0 / r1) ^ (1 / s1)) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2))
-	)
+-- why are the labeled equations combining two equations into one?  how do you denote them?
+local function normrho_z_eq_0_eqn_D_12_a(r) 
+	local alpha = alpha_for_r_d(r, d)
+	return 10 ^ ((-2/5) * (mu_for_alpha_eqn_D_11(alpha) - mu0))
+end
+local function normrho_z_eq_0_eqn_D_12_b(r) 
+	if r <= r0 then
+		return math.exp(-(r / r1) ^ (1 / s1))
+	end
+	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
 end
 
 local rvec = makePow10Range(.01, rmax)
+
+-- [[ CHECK
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_normalized_mass_density_eqn_D12.svg",
+	output = "NGC_1560_normalized_mass_density_eqn_D12_a.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
 	title = 'Normalized mass density of NGC 1560',
 	log = 'x',
-	data = {rvec, rvec:map(normrho_z_eq_0_eqn_D_12)},
+	data = {rvec, rvec:map(normrho_z_eq_0_eqn_D_12_a)},
 	{using='1:2', title=''},
 }
--- FAIL. this looks incorrect.
+--]]
 
--- TODO rotation curve
-
-
--- equation C9
-print("deriving root-finding")
-local galacticWidth_for_r_eqn_C_9 
-do -- let the newton func and deriv exist in this scope
-	local f, df_ddelta 
-	local f_lhs, f_rhs
-	do	-- use symmath vars in this scope
-		symmath.fixVariableNames = true
-		local frac = symmath.frac
-		local sqrt = symmath.sqrt
-		local exp = symmath.exp
-		-- these are in the same order the arguments are provided in the compiled function
-		local vars = table{symmath.vars('delta', 'r', 'a', 'b', 'l', 'lambda')}
-		local delta, r, a, b, l, lambda = vars:unpack()
-		local widthEqLhs = (
-				b^2 
-				* (a * r^2 + (a + 3 * sqrt(b^2 + delta^2))) 
-				* (a + sqrt(b^2 + delta^2))^2
-			) / (
-				3 
-				* (r^2 + (a + sqrt(b^2 + delta^2))^2)^frac(5,2) 
-				* (b^2 + delta^2)^frac(3,2)
-			)
-		local widthEqRhs = lambda * exp(-l^2 / 2)
-		local widthExpr = widthEqLhs - widthEqRhs
-		
-		symmath.tostring = symmath.export.SingleLine
-		print(widthExpr)
-	
-		--[[ hmm, too bloated
-		symmath.op.div:pushRule'Prune/conjOfSqrtInDenom'
-		symmath.op.div:pushRule'Factor/polydiv'
-		symmath.op.mul:pushRule'Prune/logPow'
-		symmath.op.pow:pushRule'Expand/integerPower'
-		symmath.op.pow:pushRule'Expand/expandMulOfLikePow'	
-		local dWidthExpr = widthExpr:diff(delta)()
-		--]]
-		-- [[ much better
-		local function applyDiff(x)
-			-- TODO - this is commented out in Variable because it is also duplciated in Derivative's prune() rule ...
-			if symmath.Variable:isa(x) then return x == delta and 1 or 0 end
-			return x:evaluateDerivative(applyDiff, delta)
-		end
-		local dWidthExpr = applyDiff(widthExpr):prune()
-		--]]
-		print(dWidthExpr)
-		
-		f_lhs = symmath.export.Lua:toFunc{output={widthEqLhs}, input=vars}
-		f_rhs = symmath.export.Lua:toFunc{output={widthEqRhs}, input=vars}
-		f = symmath.export.Lua:toFunc{output={widthExpr}, input=vars}
-		df_ddelta = symmath.export.Lua:toFunc{output={dWidthExpr}, input=vars}
-	end	
-	local r = 1
-print('a = '..a)
-print('b = '..b)
-print('l = '..l)
-print('lambda = '..lambda)
-	local deltavec = xvec
-	gnuplot{
-		terminal = 'svg size 1024,768 background rgb "white"',
-		output = "NGC_1560_eqn_C9_f_lhs_rhs.svg",
-		style = 'data lines',
-		xlabel = "δ (kpc)",
-		title = 'f eqn lhs & rhs for root finding delta ',
-		data = {
-			deltavec,
-			deltavec:map(function(delta)
-				return f_lhs(delta, r, a, b, l, lambda)
-			end),
-			deltavec:map(function(delta)
-				return f_rhs(delta, r, a, b, l, lambda)
-			end),
-		},
-		{using='1:2', title='lhs'},
-		{using='1:3', title='rhs'},
-	}
-	gnuplot{
-		terminal = 'svg size 1024,768 background rgb "white"',
-		output = "NGC_1560_eqn_C9_f.svg",
-		style = 'data lines',
-		xlabel = "δ (kpc)",
-		title = 'f for root finding delta ',
-		data = {
-			deltavec,
-			deltavec:map(function(delta)
-				return f(delta, r, a, b, l, lambda)
-			end),
-		},
-		{using='1:2', title=''},
-	}
-	gnuplot{
-		terminal = 'svg size 1024,768 background rgb "white"',
-		output = "NGC_1560_eqn_C9_df.svg",
-		style = 'data lines',
-		xlabel = "δ (kpc)",
-		title = 'df for root finding delta ',
-		data = {
-			deltavec,
-			deltavec:map(function(delta)
-				return df_ddelta(delta, r, a, b, l, lambda)
-			end),
-		},
-		{using='1:2', title=''},
-	}
-os.exit()
-	galacticWidth_for_r_eqn_C_9 = function(r)
-		print('for r = '..r)
-		local delta = 1
-		-- newton method
-		while true do
-			local f_val = f(delta, r, a, b, l, lambda)
-			local df_ddelta_val = df_ddelta(delta, r, a, b, l, lambda)
-			local ddelta = -f_val / df_ddelta_val
-			if math.abs(ddelta) < 1e-7 then break end 
-			delta = delta + ddelta
-			print(
-				'f = '..f_val
-				..' df_ddelta = '..df_ddelta_val
-				..' ddelta = '..ddelta
-				..' delta = '..delta
-			)
-		end
-		return delta
-	end
-end
-
-local rvec = xvec * rmax
+-- [[ CHECK
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_galactic_width_eqn_C9.svg",
-	style = 'data lines',
+	output = "NGC_1560_normalized_mass_density_eqn_D12_b.svg",
 	xlabel = "r (kpc)",
-	ylabel = "δ (kpc)",
-	title = 'Galactic width of NGC 1560',
-	data = {rvec, rvec:map(galacticWidth_for_r_eqn_C_9)},
+	ylabel = "ρ / ρ0",
+	style = 'data lines',
+	title = 'Normalized mass density of NGC 1560',
+	log = 'x',
+	data = {rvec, rvec:map(normrho_z_eq_0_eqn_D_12_b)},
 	{using='1:2', title=''},
 }
-
--- equation C.2
--- where A, B, R, Z are normalized somehow
-local function phi_for_R_Z_eqn_C_2(R,Z)
-	return -G_in_m3_per_kg_s2 * M / math.sqrt(R*R + (A + math.sqrt(B * B + Z * Z))^2)
-end
-
---[[
-equation C.7
-φ = ϕ/c^2 ... WHY DO YOU HAVE TO USE TWO DIFFERENT PHIS!?!?!?!?
-r, rs, a, b, z are in kpc ... or equivalently normalized by R0 = 1 kpc ...
 --]]
-local function normphi_for_r_z_eqn_C_7(r,z)
-	return -rs / (2 * math.sqrt(r*r + (a + math.sqrt(b*b + z*z))^2))
+
+-- [[ FAIL - inflection is too far to the right (though not as bad as D.12.a)
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_1560_normalized_mass_density_eqn_5.2b.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ / ρ0",
+	style = 'data lines',
+	title = 'Normalized mass density of NGC 1560',
+	log = 'x',
+	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)},
+	{using='1:2', title=''},
+}
+--]]
+
+
+-- TODO rotation curve
+-- where tf is the formula for the rotation curve?
+
+
+-- trying to get this ... can't get it fro 1560 or 3198
+local function makeGalaxyWidthGraphs(name)
+	do
+		local r = 1
+		local deltavec = xvec
+		gnuplot{
+			terminal = 'svg size 1024,768 background rgb "white"',
+			output = "NGC_"..name.."_eqn_C9_f_lhs_rhs.svg",
+			style = 'data lines',
+			xlabel = "δ (kpc)",
+			title = 'eqn C.9 f / lambda lhs & rhs for root finding delta based on eqn 5.2b',
+			data = {
+				deltavec,
+				-- lhs
+				deltavec:map(function(delta)
+					return normrho_for_r_z_eqn_5_2_b(r, delta)
+				end),
+				-- rhs
+				deltavec:map(function(delta)
+					return eqn_C_9_rhs_over_lambda(r, delta)
+				end),
+			},
+			{using='1:2', title='lhs'},
+			{using='1:3', title='rhs'},
+		}
+		gnuplot{
+			terminal = 'svg size 1024,768 background rgb "white"',
+			output = "NGC_"..name.."_eqn_C9_f.svg",
+			style = 'data lines',
+			xlabel = "δ (kpc)",
+			title = 'f for root finding delta based on norm rho of eqn 5.2b',
+			data = {
+				deltavec,
+				deltavec:map(function(delta)
+					return eqn_C_9_root_expr_based_on_5_2_b(r, delta)
+				end),
+			},
+			{using='1:2', title=''},
+		}
+		gnuplot{
+			terminal = 'svg size 1024,768 background rgb "white"',
+			output = "NGC_"..name.."_eqn_C9_df.svg",
+			style = 'data lines',
+			xlabel = "δ (kpc)",
+			title = 'df for root finding delta based on norm rho of eqn 5.2b',
+			data = {
+				deltavec,
+				deltavec:map(function(delta)
+					return dz_eqn_C_9_root_expr_based_on_5_2_b(r, delta)
+				end),
+			},
+			{using='1:2', title=''},
+		}
+	end
+
+	local rvec = xvec * rmax
+	timer('plotting galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b', function()
+		gnuplot{
+			terminal = 'svg size 1024,768 background rgb "white"',
+			output = "NGC_"..name.."_galactic_width_eqn_C9.svg",
+			style = 'data lines',
+			xlabel = "r (kpc)",
+			ylabel = "δ (kpc)",
+			title = "Galactic width of NGC "..name,
+			data = {rvec, rvec:map(galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b)},
+			{using='1:2', title=''},
+		}
+	end)
 end
-local function normphi_for_r_z_eq_0_eqn_C_7(r)
-	return normphi_for_r_z_eqn_C_7(r,0)
-end
+
+makeGalaxyWidthGraphs'1560'
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -728,10 +876,11 @@ gnuplot{
 	xlabel = "r (kpc)",
 	format = {y = '%.2e'},
 	title = 'Gravitational potential of NGC 1560',
-	data = {rvec, rvec:map(normphi_for_r_z_eq_0_eqn_C_7)},
+	data = {rvec, rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)},
 	{using='1:2', title=''},
 }
 -- looks wrong.
+
 
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
 print[[
@@ -778,20 +927,15 @@ wait ... is this alpha of lp?
 why don't they call it l_e? or alpha_lp? or anything else to connect the two? gah
 --]]
 alphae = 316.8		
-
 se = 1.49			-- TODO how do you derive this?
 b1 = 0.0499
 d2 = 0.0000181
 
-b1_check = b1_eqn_D_18()
-d2_check = d2_eqn_D_18()
--- b1_check = 0.050231295947568 -- close
--- b1_check = 0.14526347746999 with the denom of (alphae + alpha0) replaced with (alphae - alpha0)
--- d2_check = 1.9517551593474e-05 -- close
--- do this to fix the tiny gap in the piecewise graph
+b1_check = b1_eqn_D_18_a()	-- b1_check = 0.050231295947568 -- close
+d2_check = d2_eqn_D_18_b()	-- d2_check = 1.9517551593474e-05 -- close
+-- we can do this to fix the tiny gap in the piecewise graph:
 b1 = b1_check
 d2 = d2_check
-
 
 rmax = 30.7	-- kpc
 Ms = -21
@@ -805,11 +949,11 @@ gamma0 = gammai	-- is this a ... function or a constant? is ri and yi functions 
 y0 = 8.0
 v = 1.4
 
-alphaeff_check = alpha_for_r_d(reff, d)
-reff_check = r_for_d_alpha(d, alphaeff)
-
-alpha0_check = alpha_for_r_d(r0, d)
-r0_check = r_for_d_alpha(d, alpha0)
+alphaeff_check = alpha_for_r_d(reff, d)			-- alphaeff_check = 22.420087635554 vs 22.4 ... check
+reff_check = r_for_d_alpha(d, alphaeff)			-- reff_check = 0.99910403403053 vs 1.00 ... check
+alpha0_check = alpha_for_r_d(r0, d)				-- alpha0_check = 154.02600205626 vs 154.0 ... check
+r0_check = r_for_d_alpha(d, alpha0)				-- r0_check = 6.8688402339599 vs 6.87 ... check
+se_check = se_eqn_D_20(mu_for_alpha_eqn_D_8)	-- se_check = 1.49 vs 1.49 ... check
 
 -- not used, unless we do evaluate s as a poly of 'r', but that takes remapping the coeffs, right?
 -- wait, if alphae is derived from alpha of lp then ... re = lp ... so ... why are they even separate variables?
@@ -821,68 +965,11 @@ arctan_kspiral_in_deg = math.deg(math.atan(kspiral))
 -- theta = math.atan(ksprial) = math.rad(5.71)
 
 
--- eqn 8.2
-local function r_for_i(i)
-	-- 'i' is the index, right? the subscript of 'i' right? and not the imaginary unit *and* the denotation of r ...
-	return rspiral * math.exp(2 * math.pi * i * kspiral)
-end
 
--- eqn 8.3
-local function y_for_i(i)
-	-- to the v?  or is that a reference? what is v?
-	-- why does the eqn say exp(...)^v and not exp(v * ...) ?
-	return y0 * math.exp(2 * math.pi * i * kspiral * v)
-end
-
--- eqn 8.1
-local function Y_eqn_8_1(r)
-	local sum = 1
-	for i=0,4 do
--- I guess this is the constant they provided?
---		local gammai = gamma_for_i(i)
-		sum = sum + (y_for_i(i) * gammai / math.pi) / ((r - r_for_i(i))^2 + gammai ^2)
-	end
-	return sum
-end
-
--- eqn 8.5
--- basically same as S(alpha) from eqn D13, but with (r, r0, re) swapped with (alpha, alpha0, alphae)
-local function s_for_r_eqn_8_5(r)
-	--[[ 
-	-- since r and alpha are linear, can we just do this? 
-	-- no.  
-	-- the coefficient of difference will scale with the polynomials ...
-	if r <= r0 then
-		return sb_for_alpha_eqn_D_17(r)
-	end
-	if r <= re then
-		return sd_for_alpha_eqn_D_17(r)
-	end
-	return se
-	--]]
-	-- [[ convert to alpha and evaluate accordingly
-	local alpha = alpha_for_r_d(r, d)
-	return s_for_alpha_eqn_D_13(alpha)
-	--]]
-end
-
--- eqn 8.4
--- ... has both these equations ... and they aren't even equal ... smh
-local function normrho_z_eq_0_eqn_8_4(r)
-	--[[ can't do this without s1 and s1 defined
-	return Y_eqn_8_1(r) * 10 ^ (-2/5 * (mu_eqn_D_11(r) - mu0))
-	--]]
-	-- [[ looks good
-	return 
-		Y_eqn_8_1(r) 
-		* math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
-	--]]
-	-- "where s(r) is the Sérsic profile adjusted to the luminosity:"
-end
 
 rs = 1.20e-5		-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
 
--- used for normrho_eqn_C_4
+-- used for normrho_for_r_z_eqn_5_2_b
 a = 9.10			-- kpc - major radius bulge
 b = 2.64			-- kpc - minor radius bulge
 l = 3.0				-- range parameter
@@ -891,7 +978,7 @@ lambda = 0.00323	-- coefficient
 rmax = 30.7			-- kpc - maximum radius
 M = 1.25e+11 * Msun	-- kg - total mass of galaxy
 rho0 = 6.54e-21		-- kg/m^3 - central density
-Upsilon = 6.50 * UpsilonSun	-- total mass-to-light ratio
+Upsilon = 6.50 * UpsilonSun	-- kg/W ? ... total mass-to-light ratio
 
 alphamax = alpha_for_r_d(rmax, d)	
 -- alphamax = 688.29669041151
@@ -907,14 +994,8 @@ local alphavec = xvec * alphae
 -- this is the last dot on the normalized velocity graph. its xmax is rmax, which is 30.7 though.
 lbeta = 29.4	-- kpc
 
--- eqn D8, doesn't require alpha1 (derived from r1) or alpha0 (derived from r0) or s2, like eqn D11 requires
--- but what is "s" ?
--- after eqn D1: "where s is the Sersic index"
--- but this 's' varies with alpha ... correct?
-local function mu_for_eqn_D_8(alpha)
-	local s = s_for_alpha_eqn_D_13(alpha)
-	return mu0 + 5 / (2 * math.log(10)) * (alpha / alphaeff) ^ (1 / s)
-end
+rs_check = rs_eqn_4_9_a()			-- rs_check = 1.1966867034874e-05 vs 1.20e-5 ... check 
+lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.0032370645736991 vs 0.00323 ... check
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -925,7 +1006,7 @@ gnuplot{
 	title = "Luminosity profile of NGC 3198",
 	xrange = {0, alphae},
 	yrange = {[3] = 'reverse'},
-	data = {alphavec, alphavec:map(mu_for_eqn_D_8)},
+	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_8)},
 	{using='1:2', title=''}, 
 }
 -- CHECK.  good.
@@ -951,7 +1032,7 @@ gnuplot{
 local rvec = makePow10Range(.1, lp)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_3198_normalized_mass_density_eqn_C4.svg",
+	output = "NGC_3198_normalized_mass_density_eqn_5.2b.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -966,6 +1047,7 @@ gnuplot{
 --[[
 TODOOOO THIS IS NEVER GIVEN!!!!!!
 HOW CAN I REPRODUCE THIS GRAPH?!
+something about Abel f & g function solution...
 --]]
 local function v_for_r(r)
 	
@@ -1059,3 +1141,164 @@ hmm, where's the equation for delta(r)?
 -- all I seem to find are equalities using delta(r) ... so then you solve the nonlinear equation?
 -- 6.9, C14 ...
 --]]
+
+
+makeGalaxyWidthGraphs'3198'
+
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_3198_gravitational_potential_eqn_C7.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	format = {y = '%.2e'},
+	title = 'Gravitational potential of NGC 3198',
+	data = {rvec, rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)},
+	{using='1:2', title=''},
+}
+--[[
+FAIL
+this does not look like the graph at all
+the graph has waves like the density profile of the NGC 3198 ....
+so i'm thinking it's a different galaxy width
+Y(r) = 1 + sum ... this is the source of the waves in the profile ...
+so where else could Y(r) influence the gravitational potential?
+it is used in normrho(r,z) in eqn 8.4
+sure enough, from eqn C.4 and C.9 it looks like the rhs of the root-finding is when the z in rho(r,z) is replaced with delta(r) ... and they cross-multiply lambda ...
+--]]
+
+-- if I could match phi(r), then I bet I could match d/dr phi(r)
+-- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
+
+
+for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
+print[[
+
+
+NGC 3115
+
+]]
+
+
+mu0 = 15.21
+alphaeff = 1.88
+reff = 0.0911	-- kpc
+alpha0 = 18.24
+r0 = 0.884		-- kpc
+s0 = 0.845
+b2 = -0.00291
+b3 = -5.37e-6
+b4 = -1.13e-8
+b5 = 2.84e-10
+b6 = 5.38e-12
+b7 = 7.62e-15
+b8 = -1.07e-16
+d3 = 8.94e-9
+d4 = -1.42e-11
+d5 = -4.82e-16
+d6 = 2.04e-17
+d7 = -1.31e-20
+bPolyOrder = 8
+dPolyOrder = 7
+
+alphae = 983.45
+se = 2.43
+b1 = 0.116
+d2 = -2.21e-6
+
+rmax = 54.5	-- kpc
+Ms = -21.9
+Ls = 4.63 * Lsun	-- W
+d = 10 * 1000	-- kpc
+md = 8.08
+
+kspiral = 0.16	-- kpc?
+rspiral = 1.0	-- kpc
+gamma0 = 0.4
+y0 = 0.4
+v = 0.3	-- v? nu? upsilon? 
+
+rs = 6.79e-6	-- kpc
+a = 5.83		-- kpc
+b = 0.282		-- kpc
+l = 4.3
+lambda = 0.432
+rmax = 54.5		-- kpc
+
+M = 7.28e+10 * Msun	-- kg
+rho0 = 5.09e-19		-- kg / m^3
+Upsilon = 1.57 * UpsilonSun	-- kg / W
+
+lp = 47.7
+
+
+alphaeff_check = alpha_for_r_d(reff, d)	-- alphaeff_check = 1.879072384911 vs 1.88 ... close
+reff_check = r_for_d_alpha(d, alphaeff)	-- reff_check = 0.091144972048593 vs 0.0911 ... close
+alpha0_check = alpha_for_r_d(r0, d)		-- alpha0_check = 18.233808872243 vs 18.24 ... close
+r0_check = r_for_d_alpha(d, alpha0)		-- r0_check = 0.88430015434379 vs 0.884 ... close
+alphae_check = alpha_for_r_d(lp, d)		-- alphae_check = 983.88312579865 vs 983.45 ... close
+se_check = se_eqn_D_20(mu_for_alpha_eqn_D_8)	-- se_check = 2.43 vs 2.43 ... check
+b1_check = b1_eqn_D_18_a()				-- b1_check = 0.11562347077137 vs 0.116 ... close
+d2_check = d2_eqn_D_18_b()				-- d2_check = -2.2101537775354e-06 vs -2.21e-6 ... close
+d_check = d_for_r_alpha(reff, alphaeff)	-- d_check = 9995.0658771864 vs 10000 ... close
+
+-- why is lp the name of the dist of alphae, when r0 is the dist of alpha0 and reff is the dist of alphaeff?
+-- why not call it 're' instead of 'lp' ?
+lp_check = r_for_d_alpha(d, alphae)		-- lp_check = 47.679001468717 vs 47.7 ... close
+
+local alphavec = xvec * alphae
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_3115_luminosity_eqn_D11.svg",
+	xlabel = "α (arcsec)",
+	ylabel = "μ (mag arcsec^-2)",
+	style = 'data lines',
+	title = "Luminosity profile of NGC 3115",
+	xrange = {0, alphae},
+	yrange = {[3] = 'reverse'},
+	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_8)},
+	{using='1:2', title=''}, 
+}
+-- CHECK
+
+local alphavec = makePow10Range(0.1, alphae)	-- where does the rmax range come from?
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_3115_Sersic_index_eqn_D13.svg",
+	xlabel = "α (arcsec)",
+	ylabel = "s",
+	style = 'data lines',
+	title = "Sersic index of NGC 3115",
+	xrange = {0, alphae},
+	yrange = {0, 2.5},
+	log = 'x',
+	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
+	{using='1:2', title=''}, 
+}
+-- CHECK
+
+local rvec = makePow10Range(.1, lp)
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "NGC_3115_normalized_mass_density_eqn_5.2b.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ / ρ0",
+	style = 'data lines',
+	title = 'Normalized mass density of NGC 3115',
+	log = 'xy',
+	xrange = {.1, lp},
+	--yrange = {0, 1},
+	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_9_1)},	-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115
+	{using='1:2', title=''},
+}
+-- FAILS
+
+
+-- TODO normalized rotation curve
+
+-- TODO galactic width
+
+-- TODO gravitational potential
+
+-- TODO normalized mass density with small increase in rs
+
+-- TODO normalized rotation curve with small increase in rs
