@@ -2,11 +2,13 @@ I'm trying to reproduce the graphs in 2021 Ludwig.
 
 Seems the paper isn't very clear where it gets its graphs from (no explicit description of the rotation curve graph whatsoever) or on what equation the parameters that it lists are used in.
 
+
 ### NGC 1560 ###
 
 For NGC 1560 there are two sets of functions/parameters, one in section 7 and one in appendix D.  seems the parameters and figures in one section are sometimes used in the other section, and there's no clear indication of which is used where.
 
 CHECK:	Fig 1a: NGC 1560 - rotation velocity of a spheroid
+CHECK:	Fig 1a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeils 
 
 CHECK:	Fig 1b: NGC 1560 mass density and potential
 
@@ -42,11 +44,13 @@ TODO:	Fig 7a:	NGC 3198 normalized mass density matching measured values.
 
 TODO:	Fig 7b: NGC 3198 normalized rotation curve.  
 CHECK:	Fig 7b: NGC 3198 sampled rotation curve from 1989 Begeman
-I did go back to the cited 2006 Cooperstock et al paper which includes samples as well as its own rotation curve function and was able to reproduce that papers' graph, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
+
+I also reconstructed the cited 2006 Cooperstock et al paper's rotation curve, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
 
 TODO:	Fig 8a: NGC 3198 galactic width function.
 
 TODO:	Fig 8b:	NGC 3198 gravitational potential.
+
 
 ### NGC 3115 ###
 

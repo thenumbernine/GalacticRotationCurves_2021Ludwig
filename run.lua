@@ -545,10 +545,62 @@ local function makeNormalizedRotationCurve()
 	return rvec, betavec
 end
 
+-- 1992 Broeis, table 4
+-- col 1 is distance from galaxy center, in arcseconds
+-- col 2 is velocity, in km/s
+-- col 3 is velocity corrected for asymmetric drifts
+local _1992_Broeils_Table_4 = table{
+	{15, 4.5, 5.0},
+	{30, 8.4, 8.9},
+	{45, 14.0, 14.5},
+	{60, 26.1, 26.4},
+	{75, 28.7, 28.9},
+	{90, 27.9, 27.8},
+	{105, 32.1, 31.8},
+	{120, 43.0, 42.8},
+	{135, 47.8, 48.2},
+	{150, 47.6, 48.4},
+	{165, 49.8, 50.6},
+	{180, 52.6, 53.5},
+	{195, 56.4, 57.2},
+	{210, 58.3, 59.1},
+	{225, 58.8, 59.8},
+	{240, 59.4, 60.3},
+	{255, 59.1, 60.7},
+	{270, 59.9, 62.1},
+	{285, 61.9, 63.6},
+	{300, 60.9, 62.0},
+	{315, 60.6, 60.5},
+	{330, 62.1, 60.3},
+	{345, 64.5, 63.8},
+	{360, 65.6, 66.1},
+	{375, 67.1, 67.7},
+	{390, 68.7, 70.4},
+	{405, 70.4, 73.0},
+	{420, 71.3, 74.2},
+	{435, 72.0, 75.1},
+	{450, 72.3, 75.2},
+	{465, 73.2, 76.3},
+	{480, 74.1, 77.2},
+	{510, 74.4, 76.9},
+	{540, 75.2, 77.5},
+	{570, 76.6, 78.7},
+}
+for _,row in ipairs(_1992_Broeils_Table_4) do
+	-- convert distance from arcseconds to kpc
+	row[1] = r_for_d_alpha(d, row[1])
+	-- convert from km/s to beta = v/c
+	row[2] = row[2] * 1000 / c_in_m_per_s
+	row[3] = row[3] * 1000 / c_in_m_per_s
+end
+
+local r_in_kpc_1992_Broeils, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_Table_4):T():unpack()
+
 -- now try plotting it ...
 -- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
 -- CHECK
 -- this is figure 1 lhs
+-- looks like the paper's samples for Broeils 1992 use the corrected velocities
 local rvec, betavec = makeNormalizedRotationCurve()
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -559,8 +611,17 @@ gnuplot{
 	title = "Normalized rotation curve of NGC 1560",
 	xrange = {rvec[1], rvec[#rvec]},
 	yrange = {(table.inf(betavec)), (table.sup(betavec))},
-	data = {rvec, betavec},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		betavec,
+		r_in_kpc_1992_Broeils, 
+		beta_1992_Broeils, 
+		beta_corr_1992_Broeils
+	},
+	key = 'bottom right',
+	{using='1:2', title='beta fitted'},
+	{using='3:4', title='beta 1992 Broeils', with='points'},			-- *NOT* in 2021 Ludwig paper
+	{using='3:5', title='beta 1992 Broeils, corrected', with='points'},	-- is in the 2021 Ludwig paper
 }
 
 -- eqn 3.17:
@@ -948,6 +1009,8 @@ gnuplot{
 }
 -- fail
 -- seems I need a different normphi(r,z) ...
+-- if I use the old a, b, rs then this has too big of an amplitude
+-- if I use the new a, b, rs then this has too small of an amplitude
 
 
 -- eqn C5: lambda = 4 pi R0^3 rho0 / (3 M)
@@ -1295,8 +1358,11 @@ aka alpha=10.752101602242 arcminutes
 So d=9.4 Mpc is bad.
 
 Actually the paper doesn't say it uses d=9.4 Mpc, it says that its table is from a previous paper that uses d=9.4 Mpc.
+
+row #1 is arcminutes
+row #2 is velocity in km/s
 --]]
-local alpha_in_arcmin_vs_v_in_km_per_s_1989_Begeman = table{	-- r is in arcmin, v is in km/s
+local _1989_Begeman_Table_2 = table{	-- r is in arcmin, v is in km/s
 	{0.25,	55},
 	{0.5,	92},
 	{0.75,	110},
@@ -1326,16 +1392,14 @@ local alpha_in_arcmin_vs_v_in_km_per_s_1989_Begeman = table{	-- r is in arcmin, 
 	{10.5,	150},
 	{11.0,	149},
 }
+for _,row in ipairs(_1989_Begeman_Table_2) do
+	-- convert from arcminutes into kpc
+	row[1] = r_for_d_alpha(d, row[1] * 60)
+	-- convert from km/s to m/s
+	row[2] = row[2] * 1e+3 / c_in_m_per_s
+end
 
--- now transform from arcminutes into kpc, and transform from km/s to m/s
-local r_in_kpc_vs_beta_1989_Begeman = alpha_in_arcmin_vs_v_in_km_per_s_1989_Begeman:mapi(function(row)
-	return {
-		r_for_d_alpha(d, row[1] * 60),
-		row[2] * 1e+3 / c_in_m_per_s,
-	}
-end)
-
-local r_in_kpc_1989_Begeman, beta_1989_Begeman = matrix(r_in_kpc_vs_beta_1989_Begeman):T():unpack()
+local r_in_kpc_1989_Begeman, beta_1989_Begeman = matrix(_1989_Begeman_Table_2):T():unpack()
 
 -- verify that the last sample point in kpc is about what lbeta in the paper is
 lbeta_check = table.last(r_in_kpc_1989_Begeman)		-- lbeta_check = 29.437886716971 vs 29.4 ... close
