@@ -8,7 +8,7 @@ For NGC 1560 there are two sets of functions/parameters, one in section 7 and on
 
 CHECK:	Fig 1a: NGC 1560 - rotation velocity of a spheroid
 
-TODO:	Fig 1b: NGC 1560 mass density and potential of NGC 1560
+CHECK:	Fig 1b: NGC 1560 mass density and potential
 
 TODO:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
 
@@ -22,6 +22,7 @@ FIXME:	Fig 3b: NGC 1560 Sersic index
 CHECK:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b).
 
 TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ... so where do they get it from?)
+This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
 
 TODO:	Fig 5a: NGC 1560 galactic width.  Only root finding function, and I can't get the roots to overlap.
 

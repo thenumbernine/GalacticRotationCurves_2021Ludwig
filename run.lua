@@ -475,6 +475,10 @@ timer("deriving root-finding", function()
 	end
 end)
 
+local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
+	return normrho_for_r_z_eqn_5_2_b(r,0)
+end
+
 
 
 
@@ -494,14 +498,20 @@ lbeta = 8.29				-- kpc ... this is the starting point of integration according t
 v_at_lbeta = 80				-- km/s
 beta_at_lbeta = 0.000267	-- unitless <-> v / c
 M = 7.3e+10 * Msun			-- kg
+
+-- used for the section 6 graphs, but they are normalized anyways so it shouldn't matter right? 
+lambda = 0.134
+
 --[[
 section 5 after eqn 5.3:
 reference point: beta(lbeta) = beta_l ~ 0.000267 <-> v ~ 80 km/s
 sure enough, on figure 4, looks like the sample point and the graph overlap at r = lbeta.
 however the graph extents go further in each direction.
 i'm guessing they explicit integrated it forwards and backwards.
+
+so this makes the smooth graphs of a spheroid rotation curve.  how to get the bumpy ones? maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
 --]]
-do
+local function makeNormalizedRotationCurve(name)
 	local r = lbeta
 	local beta = beta_at_lbeta
 	local dr = lbeta / 1000
@@ -519,8 +529,8 @@ do
 	local r = lbeta
 	local beta = beta_at_lbeta
 
---[[ only figure 4 rhs has graph data from lbeta=8.29 to rmax=12
--- but this graph appears to be closest to fig 1 lhs
+--[[ only figure 4 rhs has graph data from r=0 through r=lbeta=8.29 to r=rmax=12
+-- but this graph appears to be closest to fig 1 lhs, which goes from r=0 to r=lbeta=8.29
 	while r < 10 do
 		local dbeta_dr = dr_beta_for_r_eqn_5_3(r, beta)
 		beta = beta + dbeta_dr * dr
@@ -531,24 +541,52 @@ do
 	rAndBetaVec:sort(function(a,b) return a[1] < b[1] end) 
 
 	local rvec, betavec = matrix(rAndBetaVec):T():unpack()
-
-	-- now try plotting it ...
-	-- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
-	-- CHECK
-	-- this is figure 1 lhs
-	gnuplot{
-		terminal = 'svg size 1024,768 background rgb "white"',
-		output = "Fig_1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
-		style = 'data lines',
-		xlabel = "r (kpc)",
-		ylabel = 'v/c',
-		title = "Normalized rotation curve of NGC 1560",
-		xrange = {rvec[1], rvec[#rvec]},
-		yrange = {(table.inf(betavec)), (table.sup(betavec))},
-		data = {rvec, betavec},
-		{using='1:2', title=''},
-	}
+	return rvec, betavec
 end
+
+
+local rvec, betavec = makeNormalizedRotationCurve()
+-- now try plotting it ...
+-- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
+-- CHECK
+-- this is figure 1 lhs
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	ylabel = 'v/c',
+	title = "Normalized rotation curve of NGC 1560",
+	xrange = {rvec[1], rvec[#rvec]},
+	yrange = {(table.inf(betavec)), (table.sup(betavec))},
+	data = {rvec, betavec},
+	{using='1:2', title=''},
+}
+
+
+local rvec = xvec * lbeta
+local phivec = rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
+phivec = phivec / math.abs(phivec[1])
+local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
+rhovec = rhovec / math.abs(rhovec[1])
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_1b_NGC_1560_mass_density_and_potential_eqn_5.2.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	xrange = {rvec[1], rvec[#rvec]},
+	yrange = {-1, 1},
+	format = {y = '%.2e'},
+	title = 'Mass density and potential',
+	data = {rvec, phivec, rhovec},
+	{using='1:2', title=''},
+	{using='1:3', title=''},
+	{'0', title='', lc='rgb "grey"'},	-- zero line
+}
+-- CHECK.
+
+
+
 
 --[[ 
 text after eqn 4.5: 
@@ -855,8 +893,9 @@ local function lambda_eqn_4_9_b()
 end
 
 
-M = 1.52e+10 * Msun -- kg
+-- section 7 text:
 lambda = 0.134
+M = 1.52e+10 * Msun -- kg
 rho0 = 3.31e-20	-- kg/m^3
 l = 3
 rs = 1.46e-6	-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
@@ -882,10 +921,6 @@ rs_check = rs_eqn_4_9_a()
 
 lambda_check = lambda_eqn_4_9_b()
 -- lambda_check = 0.13473115517544 ... close to 0.134
-
-local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
-	return normrho_for_r_z_eqn_5_2_b(r,0)
-end
 
 -- Appendix D, after eqn D12
 -- for NGC 1560, there is no 'd'
@@ -1032,18 +1067,7 @@ end
 
 makeGalaxyWidthGraphs'1560'
 
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_gravitational_potential_eqn_C7.svg",
-	style = 'data lines',
-	xlabel = "r (kpc)",
-	format = {y = '%.2e'},
-	title = 'Gravitational potential of NGC 1560',
-	data = {rvec, rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)},
-	{using='1:2', title=''},
-}
--- looks wrong.
-
+-- TODO gravitational potential
 
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
 print[[
