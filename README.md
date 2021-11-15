@@ -36,3 +36,21 @@ Once again I couldn't find the description of the rotation curve.  I did go back
 Haven't been able to reproduce the galactic width function.
 
 Haven't been able to reproduce the gravitational potential.
+
+### NGC 3115 ###
+
+I was able to reproduce the luminosity profile.
+
+I was able to reproduce the Sersic index.
+
+Haven't been able to reproduce the normalized mass density (dependent on Y(r), but I can't find the gammai extra coefficients for NGC 3115).
+
+Haven't been able to reproduce the normalized rotation curve. 
+
+Haven't been able to reproduce the galactic width. 
+
+Haven't been able to reproduce the gravitational potential. 
+
+Haven't been able to reproduce the normalized mass density with modified schwarzschild radius. 
+
+Haven't been able to reproduce the normalized rotation curve with modified schwarzschild radius. 
