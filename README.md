@@ -41,6 +41,7 @@ CHECK: 	Fig 7a: NGC 3198 normalized mass density corrected for high mass-to-ligh
 TODO:	Fig 7a:	NGC 3198 normalized mass density matching measured values.
 
 TODO:	Fig 7b: NGC 3198 normalized rotation curve.  
+CHECK:	Fig 7b: NGC 3198 sampled rotation curve from 1989 Begeman
 I did go back to the cited 2006 Cooperstock et al paper which includes samples as well as its own rotation curve function and was able to reproduce that papers' graph, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
 
 TODO:	Fig 8a: NGC 3198 galactic width function.

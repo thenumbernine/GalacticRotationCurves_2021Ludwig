@@ -213,19 +213,6 @@ local function phi_for_R_Z_eqn_C_2(R,Z)
 	return -G_in_m3_per_kg_s2 * M / math.sqrt(R*R + (A + math.sqrt(B * B + Z * Z))^2)
 end
 
---[[
-equation 5.2.a
-also equation C.7
-φ = ϕ/c^2 ... WHY DO YOU HAVE TO USE TWO DIFFERENT PHIS!?!?!?!?
-r, rs, a, b, z are in kpc ... or equivalently normalized by R0 = 1 kpc ...
---]]
-local function normphi_for_r_z_eqn_5_2_a(r,z)
-	return -rs / (2 * math.sqrt(r*r + (a + math.sqrt(b*b + z*z))^2))
-end
-local function normphi_for_r_z_eq_0_eqn_5_2_a(r)
-	return normphi_for_r_z_eqn_5_2_a(r,0)
-end
-
 -- eqn 8.2
 local function r_for_i(i)
 	-- 'i' is the index, right? the subscript of 'i' right? and not the imaginary unit *and* the denotation of r ...
@@ -315,6 +302,7 @@ end
 
 -- expressions ... putting all in one place so the symbolic vars will be too
 local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
+local normphi_for_r_z_eqn_5_2_a 
 local eqn_C_9_root_expr_based_on_5_2_b, dz_eqn_C_9_root_expr_based_on_5_2_b	-- internal to the newton root-finder
 local galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b
 local eqn_C_9_rhs_over_lambda		-- purely for debugging
@@ -352,7 +340,7 @@ timer("deriving root-finding", function()
 
 		-- eqn 5.2.a
 		-- normalized potential
-		local normphi_eqn_5_2_a_expr = normphi:eq(- rs / (2 * sqrt(r^2 + (a + tmp)^2)))
+		local normphi_eqn_5_2_a_expr = normphi:eq(-rs / (2 * sqrt(r^2 + (a + tmp)^2)))
 		print('eqn 5.2.a:', normphi_eqn_5_2_a_expr)
 
 		-- this is assuming rs is a point mass, right?  and not distributed?
@@ -438,7 +426,9 @@ timer("deriving root-finding", function()
 		-- using the substitution of eqn C5 to replace R0 with lambda
 		-- ok in eqn C 9 the z is replaced with "delta(z)" ... but delta is really just z. .. and they are solving for z and callign that variable "delta"
 		normrho_for_r_z_eqn_5_2_b = symmath.export.Lua:toFunc{output={normrho_eqn_5_2_b_expr:rhs()}, input=argvars}
-		
+
+		normphi_for_r_z_eqn_5_2_a = symmath.export.Lua:toFunc{output={normphi_eqn_5_2_a_expr:rhs()}, input=argvars}
+
 		eqn_C_9_rhs_over_lambda = symmath.export.Lua:toFunc{output={eqn_C_9_rhs_over_lambda_expr}, input=argvars}
 		eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={eqn_C_9_root_expr_based_onn_5_2_b_expr}, input=argvars}
 		dz_eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_C_9_root_expr}, input=argvars}
@@ -480,6 +470,14 @@ local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
 	return normrho_for_r_z_eqn_5_2_b(r,0)
 end
 
+--[[
+also equation C.7
+φ = ϕ/c^2 ... WHY DO YOU HAVE TO USE TWO DIFFERENT PHIS!?!?!?!?
+r, rs, a, b, z are in kpc ... or equivalently normalized by R0 = 1 kpc ...
+--]]
+local function normphi_for_r_z_eq_0_eqn_5_2_a(r)
+	return normphi_for_r_z_eqn_5_2_a(r,0)
+end
 
 
 
@@ -500,8 +498,10 @@ v_at_lbeta = 80				-- km/s
 beta_at_lbeta = 0.000267	-- unitless <-> v / c
 M = 7.3e+10 * Msun			-- kg
 
--- used for the section 6 graphs, but they are normalized anyways so it shouldn't matter right? 
+-- section 7 but they are normalized anyways so it shouldn't matter right? 
 lambda = 0.134
+-- used for section 6 graphs but defined in Appendix D:
+d = 3.0 * 1000 -- kpc
 
 --[[
 section 5 after eqn 5.3:
@@ -512,7 +512,7 @@ i'm guessing they explicit integrated it forwards and backwards.
 
 so this makes the smooth graphs of a spheroid rotation curve.  how to get the bumpy ones? maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
 --]]
-local function makeNormalizedRotationCurve(dbeta_dr)
+local function makeNormalizedRotationCurve()
 	local r = lbeta
 	local beta = beta_at_lbeta
 	local dr = lbeta / 1000
@@ -545,12 +545,11 @@ local function makeNormalizedRotationCurve(dbeta_dr)
 	return rvec, betavec
 end
 
-
-local rvec, betavec = makeNormalizedRotationCurve()
 -- now try plotting it ...
 -- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
 -- CHECK
 -- this is figure 1 lhs
+local rvec, betavec = makeNormalizedRotationCurve()
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
@@ -599,7 +598,6 @@ gnuplot{
 	xlabel = "r (kpc)",
 	xrange = {rvec[1], rvec[#rvec]},
 	yrange = {-1, 1},
-	format = {y = '%.2e'},
 	title = 'Mass density and potential',
 	data = {rvec, phivec, rhovec},
 	{using='1:2', title=''},
@@ -607,7 +605,6 @@ gnuplot{
 	{'0', title='', lc='rgb "grey"'},	-- zero line
 }
 -- CHECK.
-
 
 
 --[[ 
@@ -776,18 +773,17 @@ but compared to Fig 2b ...
 
 -- fig 2b subtext: "maximum radial distance 5.13 kpc" which happens to match lrho for NGC 1560 ...
 -- but the graphs extend beyond r=8 ...
-local rvec = xvec * 6.4	-- xvec * lrho	
-
 -- FAIL - what's the rmax of this?  shape doesn't look right either ...
+local rvec = xvec * lbeta
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
 	xlabel = "α (arcsec)",
-	ylabel = "μ_B (mag arcsec^-2)",	-- why is it μ_B? what does the "B" mean?
+	ylabel = "μ_B (mag arcsec^-2)",	-- why is it μ_B? what does the "B" mean? "Broeils"?  Displaying the sampled data.
 	style = 'data lines',
 	title = "Luminosity profile of NGC 1560",
 	--xrange = {rvec[1], rvec[#rvec]},	-- graph goes to 6.4, xrange goes to 8 ... hmm ...
-	xrange = {0, 8},
+	xrange = {0, lbeta},
 	yrange = {[3] = 'reverse'},
 	data = {rvec, rvec:map(function(r)
 		local alpha = alpha_for_r_d(r, d)
@@ -795,6 +791,9 @@ gnuplot{
 	end)},
 	{using='1:2', title=''}, 
 }
+
+
+
 
 -- does eqn D20 match up with se's definition in section 7?
 -- eqn D20
@@ -931,6 +930,26 @@ alphamax = alpha_for_r_d(rmax, d)
 -- which is the furthest distance specified in the figure 3 subtext.
 
 
+local rvec = xvec * rmax
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_5b_NGC_1560_Gravitational_potential.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	xrange = {rvec[1], rvec[#rvec]},
+	format = {y = '%.2e'},
+	title = 'Gravitatioanl potential of NGC 1560',
+	data = {
+		rvec,
+		rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
+	},
+	{using='1:2', title=''},
+	{'0', title='', lc='rgb "grey"'},	-- zero line
+}
+-- fail
+-- seems I need a different normphi(r,z) ...
+
+
 -- eqn C5: lambda = 4 pi R0^3 rho0 / (3 M)
 R0_in_m_check = (3 * M * lambda / (4 * math.pi * rho0)) ^ (1/3) 	-- m
 -- R0_in_m_check = 3.08008569838469e+19
@@ -945,9 +964,9 @@ lambda_check = lambda_eqn_4_9_b()
 -- lambda_check = 0.13473115517544 ... close to 0.134
 
 -- Appendix D, after eqn D12
--- for NGC 1560, there is no 'd'
--- for NGC 3198, there is a d = 9.2
--- for NGC 3115, there is a d = 10
+-- for NGC 1560, there is a d = 3 Mpc ... defined only in the Appendix D ...
+-- for NGC 3198, there is a d = 9.2 Mpc
+-- for NGC 3115, there is a d = 10 Mpc
 -- ... so what do we use for NGC 1560?
 r0_check = r_for_d_alpha(d, alpha0)
 
@@ -967,6 +986,7 @@ local function normrho_z_eq_0_eqn_D_12_b(r)
 	end
 	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
 end
+
 
 local rvec = makePow10Range(.01, rmax)
 
@@ -1261,28 +1281,90 @@ gnuplot{
 }
 
 --[[
-TODOOOO THIS IS NEVER GIVEN!!!!!!
-HOW CAN I REPRODUCE THIS GRAPH?!
-something about Abel f & g function solution...
---]]
-local function v_for_r(r)
-	
-end
+Trying to reproduce the rotation curve data points for NGC 3198. 
+The paper says they are from 1989 Begeman
+I see his figure 2, whose radial distance is in arcminutes
+The last entry is alpha = 11.0 arcminutes.
+Also the distance he uses is 9.4 Mpc, as opposed to Ludwig's 9.2 Mpc
 
+Using d=9.2 Mpc, r=29.4 kpc, we get alpha=659.15057648529 arcseconds
+very close to 660 = 11.0 arcminutes.
+
+Using the 1989 Begeman paper's d=9.4 Mpc r=29.4 kpc we get alpha=645.12609613454 arcseconds
+aka alpha=10.752101602242 arcminutes
+So d=9.4 Mpc is bad.
+
+Actually the paper doesn't say it uses d=9.4 Mpc, it says that its table is from a previous paper that uses d=9.4 Mpc.
+--]]
+local alpha_in_arcmin_vs_v_in_km_per_s_1989_Begeman = table{	-- r is in arcmin, v is in km/s
+	{0.25,	55},
+	{0.5,	92},
+	{0.75,	110},
+	{1.0,	123},
+	{1.25,	134},
+	{1.5,	142},
+	{1.75,	145},
+	{2.0,	147},
+	{2.25,	148},
+	{2.5,	152},
+	{2.75,	155},
+	{3.0,	156},
+	{3.5,	157},
+	{4.0,	153},
+	{4.5,	153},
+	{5.0,	154},
+	{5.5,	153},
+	{6.0,	150},
+	{6.5,	149},
+	{7.0,	148},
+	{7.5,	146},
+	{8.0,	147},
+	{8.5,	148},
+	{9.0,	148},
+	{9.5,	149},
+	{10.0,	150},
+	{10.5,	150},
+	{11.0,	149},
+}
+
+-- now transform from arcminutes into kpc, and transform from km/s to m/s
+local r_in_kpc_vs_beta_1989_Begeman = alpha_in_arcmin_vs_v_in_km_per_s_1989_Begeman:mapi(function(row)
+	return {
+		r_for_d_alpha(d, row[1] * 60),
+		row[2] * 1e+3 / c_in_m_per_s,
+	}
+end)
+
+local r_in_kpc_1989_Begeman, beta_1989_Begeman = matrix(r_in_kpc_vs_beta_1989_Begeman):T():unpack()
+
+-- verify that the last sample point in kpc is about what lbeta in the paper is
+lbeta_check = table.last(r_in_kpc_1989_Begeman)		-- lbeta_check = 29.437886716971 vs 29.4 ... close
+
+-- now use beta_at_lbeta from the paper ... SINCE THE 2021 LUDWIG PAPER DIDN'T PROVIDE ITTTTTT>@I$#@JK$@#J:LK$@
+beta_at_lbeta = table.last(beta_1989_Begeman)		-- beta_at_lbeta = 0.00049701050184525
+
+-- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
+-- but ... the value is not provided in this paper.
+-- well at least the 1989 Begeman paper looks correct
+local rvec, betavec = makeNormalizedRotationCurve()
 local rvec = xvec * rmax
---[=[
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_3198_normalized_rotation_curve.svg",
+	output = "Fig_7b_NGC_3198_normalized_rotation_curve.svg",
 	xlabel = "r (kpc)",
 	ylabel = "v / c",
 	style = 'data lines',
 	title = 'Normalized rotation curve of NGC 3198',
 	xrange = {0, rmax},
-	data = {rvec, rvec:map(v_for_r)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		betavec,
+		r_in_kpc_1989_Begeman,
+		beta_1989_Begeman,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1989 Begeman', with='points'},
 }
---]=]
 
 
 
