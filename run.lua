@@ -319,6 +319,7 @@ local eqn_C_9_root_expr_based_on_5_2_b, dz_eqn_C_9_root_expr_based_on_5_2_b	-- i
 local galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b
 local eqn_C_9_rhs_over_lambda		-- purely for debugging
 local dr_beta_for_r_eqn_5_3
+local g_for_r_eqn_5_3
 timer("deriving root-finding", function()
 
 	-- let the newton func and deriv exist in this scope
@@ -334,8 +335,6 @@ timer("deriving root-finding", function()
 		-- globals:
 		local a, b, l, lambda, mu0 = symmath.vars('a', 'b', 'l', 'lambda', 'mu0')
 	
-
-
 
 		local beta = var('beta', {r})
 		local f = var('f', {r})
@@ -375,17 +374,17 @@ timer("deriving root-finding", function()
 		print('eqn 5.2.b:', normrho_eqn_5_2_b_expr)
 
 		-- eqn 5.3 requires substitutions (text after eqn 5.2):
-		local fdef_eqn_5_3 = f:eq( frac(3,2) * lambda * rs * normrho * r^2 )
-		print('f for eqn 5.3:', fdef_eqn_5_3)
+		local f_eqn_5_3_expr = f:eq( frac(3,2) * lambda * rs * normrho * r^2 )
+		print('f for eqn 5.3:', f_eqn_5_3_expr)
 
-		fdef_eqn_5_3 = fdef_eqn_5_3:subst(normrho_eqn_5_2_b_expr, z:eq(0))()
-		print('f for eqn 5.3:', fdef_eqn_5_3)
+		f_eqn_5_3_expr = f_eqn_5_3_expr:subst(normrho_eqn_5_2_b_expr, z:eq(0))()
+		print('f for eqn 5.3:', f_eqn_5_3_expr)
 
-		local gdef_eqn_5_3 = g:eq(r * normphi:diff(r))
-		print('g for eqn 5.3:', gdef_eqn_5_3)
+		local g_eqn_5_3_expr = g:eq(r * normphi:diff(r))
+		print('g for eqn 5.3:', g_eqn_5_3_expr)
 		
-		gdef_eqn_5_3 = gdef_eqn_5_3:subst(normphi_eqn_5_2_a_expr, z:eq(0))()
-		print('g for eqn 5.3:', gdef_eqn_5_3)
+		g_eqn_5_3_expr = g_eqn_5_3_expr:subst(normphi_eqn_5_2_a_expr, z:eq(0))()
+		print('g for eqn 5.3:', g_eqn_5_3_expr)
 
 		-- deriving eqn 5.3 ...
 		local eqn_5_3 = eqn_5_1:clone()
@@ -400,7 +399,7 @@ timer("deriving root-finding", function()
 		eqn_5_3 = (eqn_5_3 / (r * (g + beta^2)))()
 		print('eqn 5.1 with substitutions:', eqn_5_3) 
 		
-		eqn_5_3 = eqn_5_3:subst(fdef_eqn_5_3, gdef_eqn_5_3)
+		eqn_5_3 = eqn_5_3:subst(f_eqn_5_3_expr, g_eqn_5_3_expr)
 		print('eqn 5.1 with substitutions:', eqn_5_3) 
 
 		-- now it looks like they use explicit integration to solve this, starting at some "lbeta" point ......?
@@ -445,6 +444,8 @@ timer("deriving root-finding", function()
 		dz_eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_C_9_root_expr}, input=argvars}
 	
 		dr_beta_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={eqn_5_3:rhs()}, input={r, beta}}
+	
+		g_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={g_eqn_5_3_expr:rhs()}, input={r}}
 	end	
 
 	
@@ -511,7 +512,7 @@ i'm guessing they explicit integrated it forwards and backwards.
 
 so this makes the smooth graphs of a spheroid rotation curve.  how to get the bumpy ones? maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
 --]]
-local function makeNormalizedRotationCurve(name)
+local function makeNormalizedRotationCurve(dbeta_dr)
 	local r = lbeta
 	local beta = beta_at_lbeta
 	local dr = lbeta / 1000
@@ -563,6 +564,28 @@ gnuplot{
 	{using='1:2', title=''},
 }
 
+-- eqn 3.17:
+-- v^2 ~ R dphi/dR
+-- eqn 4.14:
+-- beta^2 = r d/dr normphi(r,z=0) = g(r)
+local function betacirc_for_r_eqn_4_14(r)
+	return math.sqrt(g_for_r_eqn_5_3(r))
+end
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_2a_NGC_1560_rotation_velocity_of_spheriod_eqn_4.14.svg",
+	style = 'data lines',
+	xlabel = 'r (kpc)',
+	xrange = {rvec[1], rvec[#rvec]},
+	ylabel = 'v/c',
+	yrange = {0, .0015},
+	title = 'Rotation velocity of a spheroid',
+	data = {rvec, rvec:map(betacirc_for_r_eqn_4_14), betavec},
+	{using='1:2', title='β circ'},
+	{using='1:3', title='β'},
+}
+-- CHECK
+
 
 local rvec = xvec * lbeta
 local phivec = rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
@@ -584,7 +607,6 @@ gnuplot{
 	{'0', title='', lc='rgb "grey"'},	-- zero line
 }
 -- CHECK.
-
 
 
 

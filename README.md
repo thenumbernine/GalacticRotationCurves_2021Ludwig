@@ -10,7 +10,7 @@ CHECK:	Fig 1a: NGC 1560 - rotation velocity of a spheroid
 
 CHECK:	Fig 1b: NGC 1560 mass density and potential
 
-TODO:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
+CHECK:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
 
 TODO:	Fig 2b: NGC 1560 luminosity profile	
 
