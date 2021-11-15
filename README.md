@@ -13,10 +13,13 @@ CHECK:	Fig 1a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeil
 CHECK:	Fig 1b: NGC 1560 mass density and potential
 
 CHECK:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
+CHECK:	Fig 2a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeils 
 
-TODO:	Fig 2b: NGC 1560 luminosity profile	
+FIXME:	Fig 2b: NGC 1560 luminosity profile	
+CHECK:	Fig 2b: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 
 CHECK:	Fig 3a: NGC 1560 luminosity profile, adjusted (using the Appendix D variables)
+CHECK:	Fig 3a: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 (The Section 7 description of the Luminosity profile doesn't seem to match the Section 7 graph... is it fig 2b maybe?)
 
 FIXME:	Fig 3b: NGC 1560 Sersic index
@@ -58,7 +61,7 @@ CHECK:	Fig 9a:	NGC 3115 luminosity profile.
 
 CHECK:	Fig 9b:	NGC 3115 Sersic index.
 
-FAIL:	Fig 10a: NGC 3115 normalized mass density ... the peaks are in the right place but the wrong amplitude. 
+FIXME:	Fig 10a: NGC 3115 normalized mass density ... the peaks are in the right place but the wrong amplitude. 
 
 TODO:	Fig 10b: NGC 3115 normalized rotation curve. 
 

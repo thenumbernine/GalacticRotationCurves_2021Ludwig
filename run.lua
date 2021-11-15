@@ -545,6 +545,168 @@ local function makeNormalizedRotationCurve()
 	return rvec, betavec
 end
 
+-- col 1 = dist from galaxy center, in arcseconds
+-- col 2 = mu_B = luminosity
+local _1992_Broeils_Table_3 = table{
+	{0,		22.27},
+	{2,		22.30},
+	{4,		22.31},
+	{6,		22.29},
+	{8,		22.31},
+	{10,	22.27},
+	{12,	22.27},
+	{14,	22.27},
+	{16,	22.27},
+	{18,	22.25},
+	{20,	22.26},
+	{22,	22.30},
+	{24,	22.31},
+	{26,	22.34},
+	{28,	22.35},
+	{30,	22.42},
+	{32,	22.36},
+	{34,	22.36},
+	{36,	22.38},
+	{38,	22.36},
+	{40,	22.36},
+	{42,	22.41},
+	{44,	22.47},
+	{46,	22.47},
+	{48,	22.50},
+	{50,	22.51},
+	{52,	22.50},
+	{54,	22.54},
+	{56,	22.54},
+	{58,	22.57},
+	{60,	22.60},
+	{62,	22.63},
+	{64,	22.65},
+	{66,	22.68},
+	{68,	22.73},
+	{70,	22.75},
+	{72,	22.81},
+	{74,	22.81},
+	{76,	22.83},
+	{78,	22.89},
+	{80,	22.95},
+	{82,	22.92},
+	{84,	22.98},
+	{86,	23.01},
+	{88,	23.02},
+	{90,	23.03},
+	{92,	23.09},
+	{94,	23.11},
+	{96,	23.14},
+	{98,	23.11},
+	{100,	23.13},
+	{102,	23.20},
+	{104,	23.22},
+	{106,	23.23},
+	{108,	23.24},
+	{110,	23.32},
+	{112,	23.32},
+	{114,	23.33},
+	{116,	23.28},
+	{118,	23.34},
+	{120,	23.39},
+	{122,	23.43},
+	{124,	23.39},
+	{126,	23.46},
+	{128,	23.49},
+	{130,	23.52},
+	{132,	23.53},
+	{134,	23.57},
+	{136,	23.62},
+	{138,	23.60},
+	{140,	23.62},
+	{142,	23.63},
+	{144,	23.61},
+	{146,	23.67},
+	{148,	23.70},
+	{150,	23.73},
+	{152,	23.75},
+	{154,	23.79},
+	{156,	23.84},
+	{158,	23.80},
+	{160,	23.84},
+	{162,	23.90},
+	{164,	23.90},
+	{166,	23.95},
+	{168,	24.01},
+	{170,	24.02},
+	{172,	24.02},
+	{174,	24.04},
+	{176,	24.12},
+	{178,	24.13},
+	{180,	24.11},
+	{182,	24.18},
+	{184,	24.18},
+	{186,	24.25},
+	{188,	24.24},
+	{190,	24.23},
+	{192,	24.29},
+	{194,	24.30},
+	{196,	24.30},
+	{198,	24.34},
+	{200,   24.32},
+	{202,	24.36},
+	{204,   24.41},
+	{206,	24.44},
+	{208,	24.43},
+	{210,	24.41},
+	{212,	24.54},
+	{214,	24.55},
+	{216,	24.47},
+	{218,	24.51},
+	{220,   24.57},
+	{222,	24.56},
+	{224,	24.57},
+	{226,	24.59},
+	{228,	24.67},
+	{230,	24.73},
+	{232,	24.75},
+	{234,	24.71},
+	{236,	24.82},
+	{238,	24.86},
+	{240,	24.86},
+	{242,	24.91},
+	{244,	24.89},
+	{246,	24.99},
+	{248,	24.93},
+	{250,	24.97},
+	{253,	24.99},
+	{257,	25.05},
+	{261,	25.11},
+	{265,	25.08},
+	{269,	25.16},
+	{273,	25.18},
+	{277,	25.37},
+	{281,	25.33},
+	{285,	25.43},
+	{289,	25.37},
+	{293,	25.39},
+	{297,	25.44},
+	{301,	25.41},
+	{305,	25.61},
+	{309,	25.63},
+	{313,	25.72},
+	{317,	25.73},
+	{321,	25.75},
+	{325,	25.60},
+	{329,	25.80},
+	{333,	25.88},
+	{337,	25.81},
+	{341,	25.94},
+	{345,	25.99},
+	{349,	25.91},
+	{353,	26.13},
+}
+local alpha_in_arcsec_1992_Broeils_table_3, luminosity_1992_Broeils = matrix(_1992_Broeils_Table_3):T():unpack()
+local r_in_kpc_1992_Broeils_table_3 = alpha_in_arcsec_1992_Broeils_table_3:map(function(alpha)
+	return r_for_d_alpha(d, alpha)
+end)
+
+
 -- 1992 Broeis, table 4
 -- col 1 is distance from galaxy center, in arcseconds
 -- col 2 is velocity, in km/s
@@ -593,8 +755,7 @@ for _,row in ipairs(_1992_Broeils_Table_4) do
 	row[2] = row[2] * 1000 / c_in_m_per_s
 	row[3] = row[3] * 1000 / c_in_m_per_s
 end
-
-local r_in_kpc_1992_Broeils, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_Table_4):T():unpack()
+local r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_Table_4):T():unpack()
 
 -- now try plotting it ...
 -- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
@@ -614,7 +775,7 @@ gnuplot{
 	data = {
 		rvec,
 		betavec,
-		r_in_kpc_1992_Broeils, 
+		r_in_kpc_1992_Broeils_table_4, 
 		beta_1992_Broeils, 
 		beta_corr_1992_Broeils
 	},
@@ -640,9 +801,18 @@ gnuplot{
 	ylabel = 'v/c',
 	yrange = {0, .0015},
 	title = 'Rotation velocity of a spheroid',
-	data = {rvec, rvec:map(betacirc_for_r_eqn_4_14), betavec},
+	data = {
+		rvec,
+		rvec:map(betacirc_for_r_eqn_4_14),
+		betavec,
+		r_in_kpc_1992_Broeils_table_4, 
+		beta_1992_Broeils, 
+		beta_corr_1992_Broeils
+	},
 	{using='1:2', title='β circ'},
 	{using='1:3', title='β'},
+	{using='4:5', title='beta 1992 Broeils', with='points'},			-- *NOT* in 2021 Ludwig paper
+	{using='4:6', title='beta 1992 Broeils, corrected', with='points'},	-- is in the 2021 Ludwig paper
 }
 -- CHECK
 
@@ -740,8 +910,14 @@ gnuplot{
 	title = "Luminosity profile of NGC 1560 (using appendix D adjusted values)",
 	xrange = {0, alphae},
 	yrange = {[3] = 'reverse'},
-	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_11)},
-	{using='1:2', title=''}, 
+	data = {
+		alphavec,
+		alphavec:map(mu_for_alpha_eqn_D_11),
+		alpha_in_arcsec_1992_Broeils_table_3,
+		luminosity_1992_Broeils,
+	},
+	{using='1:2', title='2021 Ludwig'}, 
+	{using='3:4', title='1992 Broeils', with='points'}, 
 }
 
 
@@ -838,7 +1014,7 @@ but compared to Fig 2b ...
 local rvec = xvec * lbeta
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
+	output = "Fig_2b_NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "μ_B (mag arcsec^-2)",	-- why is it μ_B? what does the "B" mean? "Broeils"?  Displaying the sampled data.
 	style = 'data lines',
@@ -846,11 +1022,17 @@ gnuplot{
 	--xrange = {rvec[1], rvec[#rvec]},	-- graph goes to 6.4, xrange goes to 8 ... hmm ...
 	xrange = {0, lbeta},
 	yrange = {[3] = 'reverse'},
-	data = {rvec, rvec:map(function(r)
-		local alpha = alpha_for_r_d(r, d)
-		return mu_for_alpha_eqn_D_11(alpha)
-	end)},
-	{using='1:2', title=''}, 
+	data = {
+		rvec,
+		rvec:map(function(r)
+			local alpha = alpha_for_r_d(r, d)
+			return mu_for_alpha_eqn_D_11(alpha)
+		end),
+		r_in_kpc_1992_Broeils_table_3,
+		luminosity_1992_Broeils,
+	},
+	{using='1:2', title='2021 Ludwig'}, 
+	{using='3:4', title='1992 Broeils', with='points'}, 
 }
 
 
@@ -1081,7 +1263,7 @@ gnuplot{
 }
 --]]
 
--- [[ FAIL - inflection is too far to the right (though not as bad as D.12.a) ... until I changed something, and now it's 100% wrong.
+--[[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "NGC_1560_normalized_mass_density_eqn_5.2b.svg",
@@ -1097,6 +1279,7 @@ gnuplot{
 
 
 -- TODO rotation curve
+-- TODO while you're here, also use the sampled rotation curve points: r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_Table_4):T():unpack()
 -- where tf is the formula for the rotation curve?
 
 
