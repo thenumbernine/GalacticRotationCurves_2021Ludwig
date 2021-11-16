@@ -39,36 +39,44 @@ TODO:	Fig 5b: NGC 1560 gravitational potential (and d/dr).
 Luckily for this galaxy the author didn't divide his information between two separate sections.
 
 CHECK:	Fig 6a:	NGC 3198 luminosity profile function.
+TODO:	Fig 6a: NGC 3198 - sampled luminosity from 1987 Kent ... I have *a* 1987 Kent paper, but it doesn't have the same data, maybe it's not *the* Kent paper? 
 
 CHECK:	Fig 6b: NGC 3198 Sersic index. Using the variables he provides does produce a discontinuity at the boundary of the piecewise segments of the function, and recalculating the coefficients using the equations provided fixed this.
 
 CHECK: 	Fig 7a: NGC 3198 normalized mass density corrected for high mass-to-light ratio population.
 TODO:	Fig 7a:	NGC 3198 normalized mass density matching measured values.
+TODO:	Fig 7a: NGC 3198 - sampled normalized mass density from 1987 Kent .. can't find the values in the paper
 
 TODO:	Fig 7b: NGC 3198 normalized rotation curve.  
-CHECK:	Fig 7b: NGC 3198 sampled rotation curve from 1989 Begeman
+CHECK:	Fig 7b: NGC 3198 - sampled rotation curve from 1989 Begeman
 
 I also reconstructed the cited 2006 Cooperstock et al paper's rotation curve, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
 
 TODO:	Fig 8a: NGC 3198 galactic width function.
 
-TODO:	Fig 8b:	NGC 3198 gravitational potential.
+TODO:	Fig 8b:	NGC 3198 gravitational potential and gravitational potential derivative.
 
 
 ### NGC 3115 ###
 
 CHECK:	Fig 9a:	NGC 3115 luminosity profile.
+CHECK:	Fig 9a: NGC 3115 - sampled luminosity from 1987 Capaccioli.
 
 CHECK:	Fig 9b:	NGC 3115 Sersic index.
 
-FIXME:	Fig 10a: NGC 3115 normalized mass density ... the peaks are in the right place but the wrong amplitude. 
+FIXME:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-light ratio population ... the peaks are in the right place but the wrong amplitude. 
+TODO	Fig 10a: NGC 3115 normalized mass density matching the samples 
+TODO:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli.
 
 TODO:	Fig 10b: NGC 3115 normalized rotation curve. 
+TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
 
 TODO:	Fig 11a: NGC 3115 galactic width. 
 
 TODO:	Fig 11b: NGC 3115 gravitational potential. 
 
 TODO:	Fig 12a: NGC 3115 normalized mass density with modified schwarzschild radius. 
+TODO:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli.
 
 TODO:	Fig 12b: NGC 3115 normalized rotation curve with modified schwarzschild radius. 
+TODO:	Fig 12b: NGC 3115 - sampled rotation curve from 1980 Rubin.

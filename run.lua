@@ -479,6 +479,52 @@ local function normphi_for_r_z_eq_0_eqn_5_2_a(r)
 	return normphi_for_r_z_eqn_5_2_a(r,0)
 end
 
+--[[
+section 5 after eqn 5.3:
+reference point: beta(lbeta) = beta_l ~ 0.000267 <-> v ~ 80 km/s
+sure enough, on figure 4, looks like the sample point and the graph overlap at r = lbeta.
+however the graph extents go further in each direction.
+i'm guessing they explicit integrated it forwards and backwards.
+
+so this makes the smooth graphs of a spheroid rotation curve.  how to get the bumpy ones? maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
+--]]
+local function makeRotationCurve()
+	local r = lbeta
+	local beta = beta_at_lbeta
+	local dr = lbeta / 1000			-- make 1000 points
+	local rAndBetaVec = table()
+print('dr', dr)
+print('r', r, 'beta', beta)
+
+	rAndBetaVec:insert{r, beta}
+
+	while r >= 0 do
+		local dbeta_dr = dr_beta_for_r_eqn_5_3(r, beta)
+		beta = beta + dbeta_dr * -dr
+		r = r + -dr
+print('r', r, 'beta', beta, 'dbeta_dr', dbeta_dr)
+		rAndBetaVec:insert{r, beta}
+	end
+	
+	local r = lbeta
+	local beta = beta_at_lbeta
+
+--[[ only figure 4 rhs has graph data from r=0 through r=lbeta=8.29 to r=rmax=12
+-- but this graph appears to be closest to fig 1 lhs, which goes from r=0 to r=lbeta=8.29
+	while r < 10 do
+		local dbeta_dr = dr_beta_for_r_eqn_5_3(r, beta)
+		beta = beta + dbeta_dr * dr
+		r = r + dr
+		rAndBetaVec:insert{r, beta}
+	end
+--]]	
+	rAndBetaVec:sort(function(a,b) return a[1] < b[1] end) 
+
+	local rvec, betavec = matrix(rAndBetaVec):T():unpack()
+	return rvec, betavec
+end
+
+
 
 
 print[[
@@ -503,51 +549,9 @@ lambda = 0.134
 -- used for section 6 graphs but defined in Appendix D:
 d = 3.0 * 1000 -- kpc
 
---[[
-section 5 after eqn 5.3:
-reference point: beta(lbeta) = beta_l ~ 0.000267 <-> v ~ 80 km/s
-sure enough, on figure 4, looks like the sample point and the graph overlap at r = lbeta.
-however the graph extents go further in each direction.
-i'm guessing they explicit integrated it forwards and backwards.
-
-so this makes the smooth graphs of a spheroid rotation curve.  how to get the bumpy ones? maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
---]]
-local function makeNormalizedRotationCurve()
-	local r = lbeta
-	local beta = beta_at_lbeta
-	local dr = lbeta / 1000
-	local rAndBetaVec = table()
-
-	rAndBetaVec:insert{r, beta}
-
-	while r >= 0 do
-		local dbeta_dr = dr_beta_for_r_eqn_5_3(r, beta)
-		beta = beta + dbeta_dr * -dr
-		r = r + -dr
-		rAndBetaVec:insert{r, beta}
-	end
-	
-	local r = lbeta
-	local beta = beta_at_lbeta
-
---[[ only figure 4 rhs has graph data from r=0 through r=lbeta=8.29 to r=rmax=12
--- but this graph appears to be closest to fig 1 lhs, which goes from r=0 to r=lbeta=8.29
-	while r < 10 do
-		local dbeta_dr = dr_beta_for_r_eqn_5_3(r, beta)
-		beta = beta + dbeta_dr * dr
-		r = r + dr
-		rAndBetaVec:insert{r, beta}
-	end
---]]	
-	rAndBetaVec:sort(function(a,b) return a[1] < b[1] end) 
-
-	local rvec, betavec = matrix(rAndBetaVec):T():unpack()
-	return rvec, betavec
-end
-
 -- col 1 = dist from galaxy center, in arcseconds
 -- col 2 = mu_B = luminosity
-local _1992_Broeils_Table_3 = table{
+local _1992_Broeils_table_3 = table{
 	{0,		22.27},
 	{2,		22.30},
 	{4,		22.31},
@@ -701,17 +705,15 @@ local _1992_Broeils_Table_3 = table{
 	{349,	25.91},
 	{353,	26.13},
 }
-local alpha_in_arcsec_1992_Broeils_table_3, luminosity_1992_Broeils = matrix(_1992_Broeils_Table_3):T():unpack()
-local r_in_kpc_1992_Broeils_table_3 = alpha_in_arcsec_1992_Broeils_table_3:map(function(alpha)
-	return r_for_d_alpha(d, alpha)
-end)
+local alpha_in_arcsec_1992_Broeils_table_3, luminosity_1992_Broeils = matrix(_1992_Broeils_table_3):T():unpack()
+local r_in_kpc_1992_Broeils_table_3 = alpha_in_arcsec_1992_Broeils_table_3:map(function(alpha) return r_for_d_alpha(d, alpha) end)
 
 
 -- 1992 Broeis, table 4
 -- col 1 is distance from galaxy center, in arcseconds
 -- col 2 is velocity, in km/s
 -- col 3 is velocity corrected for asymmetric drifts
-local _1992_Broeils_Table_4 = table{
+local _1992_Broeils_table_4 = table{
 	{15, 4.5, 5.0},
 	{30, 8.4, 8.9},
 	{45, 14.0, 14.5},
@@ -748,21 +750,21 @@ local _1992_Broeils_Table_4 = table{
 	{540, 75.2, 77.5},
 	{570, 76.6, 78.7},
 }
-for _,row in ipairs(_1992_Broeils_Table_4) do
+for _,row in ipairs(_1992_Broeils_table_4) do
 	-- convert distance from arcseconds to kpc
 	row[1] = r_for_d_alpha(d, row[1])
 	-- convert from km/s to beta = v/c
 	row[2] = row[2] * 1000 / c_in_m_per_s
 	row[3] = row[3] * 1000 / c_in_m_per_s
 end
-local r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_Table_4):T():unpack()
+local r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_table_4):T():unpack()
 
 -- now try plotting it ...
 -- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
 -- CHECK
 -- this is figure 1 lhs
 -- looks like the paper's samples for Broeils 1992 use the corrected velocities
-local rvec, betavec = makeNormalizedRotationCurve()
+local rvec, betavec = makeRotationCurve()
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
@@ -983,8 +985,6 @@ alphae_check = alpha_for_r_d(lrho, d)		-- alphae_check = 352.71281868253 - close
 
 alphae = alphae_check
 
-local alphavec = xvec * alphae
-
 --[[
 ok going over coefficients / polynomials / constraints in Appendix D, eqns D14-D18 ...
 from eqn D14 to eqn D17, they go from using 
@@ -1104,38 +1104,6 @@ print('dSd_dalpha(alphae) = '..dSd_dalpha(alphae)..' should equal 0')
 -- FAIL
 
 
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_Sersic_index_eqn_D13.svg",
-	xlabel = "α (arcsec)",
-	ylabel = "s",
-	style = 'data lines',
-	title = 'Sersic index of NGC 1560',
-	xrange = {0, alphae},
-	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
-	{using='1:2', title=''},
-}
--- FAIL. this looks incorrect.
-
-
--- how about using D19
-local function S_eqn_D_19(alpha) 
-	-- eqn D19 ... looks bad
-	return math.log(alpha / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))	
-end
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_Sersic_index_eqn_D19.svg",
-	xlabel = "α (arcsec)",
-	ylabel = "s",
-	style = 'data lines',
-	title = 'Sersic index of NGC 1560',
-	xrange = {0, alphae},
-	data = {alphavec, alphavec:map(S_eqn_D_19)},
-	{using='1:2', title=''},
-}
-
-
 -- R0's def:
 -- in the text after eqn 4.5
 -- and in the text after eqn C.3
@@ -1233,6 +1201,43 @@ local function normrho_z_eq_0_eqn_D_12_b(r)
 end
 
 
+
+local alphavec = xvec * alphae
+
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_3b_NGC_1560_Sersic_index_eqn_D13.svg",
+	xlabel = "α (arcsec)",
+	ylabel = "s",
+	style = 'data lines',
+	title = 'Sersic index of NGC 1560',
+	xrange = {0, alphae},
+	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
+	{using='1:2', title=''},
+}
+-- FAIL. rhs past alphaeff looks too low
+
+
+-- how about using D19
+local function S_eqn_D_19(alpha) 
+	-- eqn D19 ... looks bad
+	return math.log(alpha / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))	
+end
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_3b_NGC_1560_Sersic_index_eqn_D19.svg",
+	xlabel = "α (arcsec)",
+	ylabel = "s",
+	style = 'data lines',
+	title = 'Sersic index of NGC 1560',
+	xrange = {0, alphae},
+	data = {alphavec, alphavec:map(S_eqn_D_19)},
+	{using='1:2', title=''},
+}
+-- FAIL.  completely wrong.
+
+
+
 local rvec = makePow10Range(.01, rmax)
 
 -- [[ CHECK
@@ -1279,9 +1284,17 @@ gnuplot{
 
 
 -- TODO rotation curve
--- TODO while you're here, also use the sampled rotation curve points: r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_Table_4):T():unpack()
--- where tf is the formula for the rotation curve?
-
+-- TODO while you're here, also use the sampled rotation curve points: r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_table_4):T():unpack()
+--[[
+Section 7 text beneath Fig 4:
+	
+	The left-hand graphic in Fig. 4 shows the normalized mass
+	density profile ϱ(r, 0) obtained for NGC 1560 (the infor-
+	mation in this figure is the same as displayed in Fig. 3).
+	Now, ϱ(r, 0) can be substituted in the equation (C18) for
+	∂φ(r, 0) /∂r and used to determine both the functions f(r)
+	and g(r) in Abel’s equation (5.1).
+--]]
 
 -- trying to get this ... can't get it fro 1560 or 3198
 local function makeGalaxyWidthGraphs(name)
@@ -1494,6 +1507,8 @@ gnuplot{
 -- CHECK.  good.
 -- though there is a hiccup in the sd->sb transition at alpha0
 -- solution? re-derive the parenthesis values like b1
+-- BUT the data points are supposed to come from 1987 Kent .... but they don't ...
+-- there's no table in 1987 Kent, except for a table of rad, min, max
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1545,7 +1560,7 @@ Actually the paper doesn't say it uses d=9.4 Mpc, it says that its table is from
 row #1 is arcminutes
 row #2 is velocity in km/s
 --]]
-local _1989_Begeman_Table_2 = table{	-- r is in arcmin, v is in km/s
+local _1989_Begeman_table_2 = table{	-- r is in arcmin, v is in km/s
 	{0.25,	55},
 	{0.5,	92},
 	{0.75,	110},
@@ -1575,14 +1590,13 @@ local _1989_Begeman_Table_2 = table{	-- r is in arcmin, v is in km/s
 	{10.5,	150},
 	{11.0,	149},
 }
-for _,row in ipairs(_1989_Begeman_Table_2) do
+for _,row in ipairs(_1989_Begeman_table_2) do
 	-- convert from arcminutes into kpc
 	row[1] = r_for_d_alpha(d, row[1] * 60)
 	-- convert from km/s to m/s
 	row[2] = row[2] * 1e+3 / c_in_m_per_s
 end
-
-local r_in_kpc_1989_Begeman, beta_1989_Begeman = matrix(_1989_Begeman_Table_2):T():unpack()
+local r_in_kpc_1989_Begeman, beta_1989_Begeman = matrix(_1989_Begeman_table_2):T():unpack()
 
 -- verify that the last sample point in kpc is about what lbeta in the paper is
 lbeta_check = table.last(r_in_kpc_1989_Begeman)		-- lbeta_check = 29.437886716971 vs 29.4 ... close
@@ -1593,15 +1607,15 @@ beta_at_lbeta = table.last(beta_1989_Begeman)		-- beta_at_lbeta = 0.000497010501
 -- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
 -- but ... the value is not provided in this paper.
 -- well at least the 1989 Begeman paper looks correct
-local rvec, betavec = makeNormalizedRotationCurve()
-local rvec = xvec * rmax
+local rvec, betavec = makeRotationCurve()
+--local rvec = xvec * rmax	-- equivalent, since rmax = 30.7, and lbeta = 29.4
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_7b_NGC_3198_normalized_rotation_curve.svg",
 	xlabel = "r (kpc)",
 	ylabel = "v / c",
 	style = 'data lines',
-	title = 'Normalized rotation curve of NGC 3198',
+	title = 'Normalized rotation curve of NGC 3198',	-- why is this called "normalized" rotation curve?
 	xrange = {0, rmax},
 	data = {
 		rvec,
@@ -1612,7 +1626,6 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1989 Begeman', with='points'},
 }
-
 
 
 --[[
@@ -1765,6 +1778,7 @@ y0 = 0.4
 v = 0.3	-- v? nu? upsilon? 
 
 -- Section 9, just before eqn 9.1: "These current rings can be represented taking two terms (i = 0, 1) in Eq. (8.1)." 
+-- Likewise if you set this to 4 then you get extra peaks that shouldn't be there.
 YOrder = 1
 
 rs = 6.79e-6	-- kpc
@@ -1799,6 +1813,90 @@ d2 = d2_check
 -- why not call it 're' instead of 'lrho' ?
 lrho_check = r_for_d_alpha(d, alphae)		-- lrho_check = 47.679001468717 vs 47.7 ... close
 
+
+-- 1st col is alpha^(1/4), in arcseconds, so ^4 it to get the arcseconds
+-- 2nd col is the final processing major (axis?) luminosity in mag/arcsec^2 ... this is the one that the 2021 Ludwig paper uses
+-- 3rd col is the final processing minor (axis?), which I don't think the paper uses ... and isn't complete anyways ...
+local _1987_Capaccioli_table_9 = table{
+	{0.65,	15.34,	15.35},
+	{0.70,	15.36,	15.38},
+	{0.75,	15.37,	15.42},
+	{0.80,	15.39,	15.48},
+	{0.85,	15.42,	15.57},
+	{0.90,	15.49,	15.70},
+	{0.95,	15.61,	15.89},
+	{1.00,	15.75,	16.13},
+	{1.05,	15.92,	16.40},
+	{1.10,	16.09,	16.67},
+	{1.15,	16.26,	16.93},
+	{1.20,	16.43,	17.17},
+	{1.25,	16.59,	17.41},
+	{1.30,	16.76,	17.62},
+	{1.35,	16.93,	17.82},
+	{1.40,	17.11,	18.01},
+	{1.45,	17.27,	18.20},
+	{1.50,	17.42,	18.40},
+	{1.55,	17.58,	18.61},
+	{1.60,	17.71,	18.82},
+	{1.65,	17.88,	19.01},
+	{1.70,	17.97,	19.21},
+	{1.75,	18.06,	19.43},
+	{1.80,	18.18,	19.65},
+	{1.85,	18.29,	19.88},
+	{1.90,	18.36,	20.12},
+	{1.95,	18.42,	20.36},
+	{2.00,	18.50,	20.57},
+	{2.05,	18.63,	20.79},
+	{2.10,	18.82,	21.04},
+	{2.15,	19.01,	21.23},
+	{2.20,	19.19,	21.40},
+	{2.25,	19.35,	21.56},
+	{2.30,	19.51,	21.72},
+	{2.35,	19.65,	21.91},
+	{2.40,	19.80,	22.07},
+	{2.45,	19.95,	22.21},
+	{2.50,	20.08,	22.39},
+	{2.55,	20.20,	22.59},
+	{2.60,	20.34,	22.71},
+	{2.65,	20.51,	22.84},
+	{2.70,	20.67,	23.00},
+	{2.75,	20.75,	math.nan},
+	{2.80,	20.85,	23.27},
+	{2.85,	21.01,	math.nan},
+	{2.90,	21.15,	23.57},
+	{2.95,	21.26,	math.nan},
+	{3.00,	21.46,	23.87},
+	{3.10,	21.83,	24.13},
+	{3.20,	22.21,	24.40},
+	{3.30,	22.58,	24.73},
+	{3.40,	22.94,	25.02},
+	{3.50,	23.30,	25.31},
+	{3.60,	23.65,	25.60},
+	{3.70,	23.98,	25.84},
+	{3.80,	24.31,	26.10},
+	{3.90,	24.63,	26.37},
+	{4.00,	24.96,	26.63},
+	{4.10,	25.29,	26.97},
+	{4.20,	25.65,	27.29},
+	{4.30,	26.01,	27.54},
+	{4.40,	26.35,	27.81},
+	{4.50,	26.63,	28.06},
+	{4.60,	26.90,	28.31},
+	{4.70,	27.21,	28.54},
+	{4.80,	27.50,	28.76},
+	{4.90,	27.78,	28.97},
+	{5.00,	28.03,	29.15},
+	{5.10,	28.27,	math.nan},
+	{5.20,	28.49,	math.nan},
+	{5.30,	28.69,	math.nan},
+	{5.40,	28.90,	math.nan},
+	{5.50,	29.14,	math.nan},
+	{5.60,	29.42,	math.nan},
+}
+local alpha_in_arcsec_qtrt_1987_Capaccioli_table_9, luminosity_1987_Capaccioli_table_9 = matrix(_1987_Capaccioli_table_9):T():unpack()
+local alpha_in_arcsec_1987_Capaccioli_table_9 = alpha_in_arcsec_qtrt_1987_Capaccioli_table_9:map(function(x) return x*x*x*x end)
+
+
 local alphavec = xvec * alphae
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1809,8 +1907,14 @@ gnuplot{
 	title = "Luminosity profile of NGC 3115",
 	xrange = {0, alphae},
 	yrange = {[3] = 'reverse'},
-	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_8)},
-	{using='1:2', title=''}, 
+	data = {
+		alphavec,
+		alphavec:map(mu_for_alpha_eqn_D_8),
+		alpha_in_arcsec_1987_Capaccioli_table_9,
+		luminosity_1987_Capaccioli_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'}, 
+	{using='3:4', title='1987 Capaccioli et al', with='points'}, 
 }
 -- CHECK
 
@@ -1830,10 +1934,22 @@ gnuplot{
 }
 -- CHECK
 
+local r_in_kpc_1987_Capaccioli_table_9 = alpha_in_arcsec_1987_Capaccioli_table_9:map(function(alpha) return r_for_d_alpha(d, alpha) end)
+
+-- TODO hmm, how do you convert mu into rho ...?
+-- lum * mass/lum = mass, right?
+-- should this be "rho" or "M" ... ?
+local rho_1987_Capaccioli_table_9 = luminosity_1987_Capaccioli_table_9 * Upsilon
+-- but then we normalize it anyways, so ... scaling shouldn't matter anyways
+local normrho_1987_Capaccioli_table_9 = rho_1987_Capaccioli_table_9 / rho_1987_Capaccioli_table_9[1]
+
+-- two graph contestants for the normalized mass density, each with their own set of problems:
+
 local rvec = makePow10Range(.01, lrho)
+
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_3115_normalized_mass_density_eqn_9.1a.svg",
+	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_9.1a.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -1843,8 +1959,14 @@ gnuplot{
 	yrange = {1e-6, 1},
 	format = {y = '%.2e'},
 	-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 ... so I'm guessing
-	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a),
+		r_in_kpc_1987_Capaccioli_table_9,
+		normrho_1987_Capaccioli_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points'},
 }
 -- FAIL ...
 -- xrange and yrange are good, peaks are in proper place, but peaks are wrong amplitude.
@@ -1852,7 +1974,7 @@ gnuplot{
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_3115_normalized_mass_density_eqn_9.1b.svg",
+	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_9.1b.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -1862,8 +1984,14 @@ gnuplot{
 	yrange = {1e-6, 1},
 	format = {y = '%.2e'},
 	-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 ... so I'm guessing
-	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b),
+		r_in_kpc_1987_Capaccioli_table_9,
+		normrho_1987_Capaccioli_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points'},
 }
 -- FAIL, wrong yrange, but right peaks 
 
