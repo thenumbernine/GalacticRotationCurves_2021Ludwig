@@ -1335,9 +1335,41 @@ gnuplot{
 
 
 
-local rvec = makePow10Range(.01, rmax)
+--[[
+Fig 4 subtext:
+	The line in the left-hand side graphic shows the mass density
+	profile fitted to the observed luminosity profile of NGC 1560, repre-
+	sented by dots.
+BUT WHERE DID YOU GET THE DATA FROM?
+alright sifting through more sources.
+2010 Gentile et al has 
+	eqn 8: mu(x) = x/sqrt(1 + x^2) 
+	eqn 7: mu(x) = x/(1 + x^2)
+1992 Broeils has:
+	eqn in section 5.4: mu(x) = x / sqrt(1 + x^2)
+but in all these cases ... what is x?
+--]]
+--[[ this looks pretty wrong.
+local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(function(x) return 1 / x end)
+normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1]
+--]]
+--[[
+how about D.12.a? 
+normrho(r) = 10^(-2/5 (mu(r) - mu0))
+this looks relaly really good
+but it doesn't fit the curve
+maybe cuz the curve was really wrong?
+--]]
+-- [[
+local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(function(mu)
+	return 10^(-2/5 * (mu - mu0))
+end)
+normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1] 
+--]]
 
--- [[ CHECK
+local rvec = makePow10Range(.01, rmax)
+-- [[ maybe CHECK for the 2021 Ludwig curve
+-- still working on the luminosity sample points (where did he get them from?)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_D12_a.svg",
@@ -1346,8 +1378,14 @@ gnuplot{
 	style = 'data lines',
 	title = 'Normalized mass density of NGC 1560',
 	log = 'x',
-	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a),
+		r_in_kpc_1992_Broeils_table_3,
+		normrho_for_lum_1992_Broeils,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1992 Broeils', with='points'},
 }
 --]]
 
@@ -1360,22 +1398,34 @@ gnuplot{
 	style = 'data lines',
 	title = 'Normalized mass density of NGC 1560',
 	log = 'x',
-	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b),
+		r_in_kpc_1992_Broeils_table_3,
+		normrho_for_lum_1992_Broeils,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1992 Broeils', with='points'},
 }
 --]]
 
---[[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
+-- [[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "NGC_1560_normalized_mass_density_eqn_5.2b.svg",
+	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
 	title = 'Normalized mass density of NGC 1560',
 	log = 'x',
-	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b),
+		r_in_kpc_1992_Broeils_table_3,
+		normrho_for_lum_1992_Broeils,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1992 Broeils', with='points'},
 }
 --]]
 
@@ -2143,8 +2193,9 @@ gnuplot{
 	{using='3:4', title='1987 Capaccioli et al', with='points'},
 }
 
+-- [[ CHECK
 -- FAILS WITH THE INCORRECT EQUATION IN 9.1b
--- unless of course I assumed wrong about how to fix 9.1a
+-- unless of course I assumed wrong about how to fix 9.1a -- THEN IT WORKS
 -- either way, now it looks right, now that I replaced the 9.1b denominator of r0 with reff  (and added a final piecewise boundary for s(r) = se)
 -- wrong yrange, but right peaks 
 gnuplot{
@@ -2168,6 +2219,7 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1987 Capaccioli et al', with='points'},
 }
+--]]
 
 
 -- TODO normalized rotation curve

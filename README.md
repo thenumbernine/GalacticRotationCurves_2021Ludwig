@@ -26,6 +26,7 @@ CHECK:	Fig 3a: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 FIXME:	Fig 3b: NGC 1560 Sersic index
 
 CHECK:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b).
+TODO:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
 
 TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ... so where do they get it from?)
 This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
