@@ -271,7 +271,7 @@ end
 
 -- eqn 8.4
 -- ... has both these equations ... and they aren't even equal ... smh
-local function normrho_z_eq_0_eqn_8_4(r)
+local function normrho_for_r_z_eq_0_eqn_8_4(r)
 	--[[ can't do this without s1 and s1 of the galaxy being defined ... which it is not for NGC 3198
 	local alpha = alpha_for_r(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))
@@ -546,11 +546,11 @@ end
 -- depends upon s1 and s2 to be defined
 -- and those are only defined for NGC 1560 in Appendix D
 -- why are the labeled equations combining two equations into one?  how do you denote them?
-local function normrho_z_eq_0_eqn_D_12_a(r) 
+local function normrho_for_r_z_eq_0_eqn_D_12_a(r) 
 	local alpha = alpha_for_r(r)
 	return 10 ^ ((-2/5) * (mu_for_alpha_eqn_D_11(alpha) - mu0))
 end
-local function normrho_z_eq_0_eqn_D_12_b(r) 
+local function normrho_for_r_z_eq_0_eqn_D_12_b(r) 
 	if r <= r0 then
 		return math.exp(-(r / r1) ^ (1 / s1))
 	end
@@ -859,15 +859,15 @@ local normphivec = phivec / math.abs(phivec[1])
 local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
 --]]
 --[[ can't do any of these, because it needs Y(r)'s order "YOrder" defined.
-local rhovec = rvec:map(normrho_z_eq_0_eqn_8_4)
+local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4)
 local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a)
 local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b)
 --]]
 --[[ can't do this because we're missing alpha0
-local rhovec = rvec:map(normrho_z_eq_0_eqn_D_12_a)
+local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a)
 --]]
 --[[ can't do this because we're missing r0
-local rhovec = rvec:map(normrho_z_eq_0_eqn_D_12_b)
+local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b)
 --]]
 local normrhovec = rhovec / math.abs(rhovec[1])
 
@@ -1045,15 +1045,45 @@ compared to Fig 3a this is wrong -- inflection too far right, the value raises t
 but compared to Fig 2b ...
 --]]
 
--- fig 2b subtext: "maximum radial distance 5.13 kpc" which happens to match lrho for NGC 1560 ...
--- but the graphs extend beyond r=8 ...
--- FAIL - what's the rmax of this?  shape doesn't look right either ...
+
+--[[
+fig 2b subtext: "maximum radial distance 5.13 kpc" which happens to match lrho for NGC 1560 ...
+but the graphs extend beyond r=8 ...
+FAIL - what's the rmax of this?  shape doesn't look right either ...
+why is it μ_B? what does the "B" mean? "Broeils"?  No, that's just the sampled data, 
+ while this is the y axis label, applying also to the 2021 Ludwig graph ... 
+
+is there ever any relation between mu(r) and rho(r) in general?
+or do we always only ever have to use predefined mu(r) functions? how are these even generated?
+
+[mu] = mag/arcsec^2
+[arcsec] = [r] / [d] = [1] = unitless
+mag ... is magnitude? absolute or apparent? is also unitless
+so [mu] is really unitless ...
+
+so rho is units of kg/m^3
+Upsilon is units of kg/W
+so rho/Upsilon = W/m^3
+
+I guess we have ...
+D.12.a: normrho(r) = 10^(-2/5 (mu(r) - mu0))
+D.7: mu(R) = mu0 + 5 / (2 log (10)) * (R / (b_s^-s Reff))^(1/s)
+
+should we say r = R / R0, reff = Reff / R0, so R/Ref = r/reff?
+combined: normrho(r) = exp( -(r / (b_s^-s reff))^(1/s) )
+and this fits with eqn 8.4: normrho(r) = Y(r) * exp(-(r / reff) ^ (1 / s(r)))
+I guess that means R / (b_s^-s Reff) = r / reff ... does that mean "b_s^-s Reff" is a lone variable, and not two, or three?  I can't tell.
+
+how do we invert that, to solve for mu using rho?
+mu(r) = mu0 - 5/2 log10(normrho)
+
+--]]
 local rvec = xvec * lbeta
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_2b_NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
 	xlabel = "α (arcsec)",
-	ylabel = "μ_B (mag arcsec^-2)",	-- why is it μ_B? what does the "B" mean? "Broeils"?  Displaying the sampled data.
+	ylabel = "μ_B (mag arcsec^-2)",	
 	style = 'data lines',
 	title = "Luminosity profile of NGC 1560",
 	--xrange = {rvec[1], rvec[#rvec]},	-- graph goes to 6.4, xrange goes to 8 ... hmm ...
@@ -1063,7 +1093,14 @@ gnuplot{
 		rvec,
 		rvec:map(function(r)
 			local alpha = alpha_for_r(r)
+			-- [[ looks too fat
+			-- no dif with section 7's variables
 			return mu_for_alpha_eqn_D_11(alpha)
+			--]]
+			--[[ looks more like fig. 3a ...
+			-- look much fatter with section 7's variables
+			return mu_for_alpha_eqn_D_8(alpha)
+			--]]
 		end),
 		r_in_kpc_1992_Broeils_table_3,
 		luminosity_1992_Broeils,
@@ -1271,7 +1308,7 @@ gnuplot{
 	style = 'data lines',
 	title = 'Normalized mass density of NGC 1560',
 	log = 'x',
-	data = {rvec, rvec:map(normrho_z_eq_0_eqn_D_12_a)},
+	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a)},
 	{using='1:2', title=''},
 }
 --]]
@@ -1285,7 +1322,7 @@ gnuplot{
 	style = 'data lines',
 	title = 'Normalized mass density of NGC 1560',
 	log = 'x',
-	data = {rvec, rvec:map(normrho_z_eq_0_eqn_D_12_b)},
+	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b)},
 	{using='1:2', title=''},
 }
 --]]
@@ -1563,7 +1600,7 @@ gnuplot{
 	log = 'xy',
 	xrange = {.1, lrho},
 	yrange = {.002, 2},
-	data = {rvec, rvec:map(normrho_z_eq_0_eqn_8_4)},
+	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_8_4)},
 	{using='1:2', title=''},
 }
 
@@ -1643,8 +1680,8 @@ So can I use ϱ(r) to get f(r)?
 Looks like it, from the text under eqn 5.2, nice and easy:
 f(r) = (3/2) lambda rs normrho(r,0) r^2
 --]]
-local function f_for_r_eqn_5_3_based_on_normrho_z_eq_0_eqn_8_4(r)
-	return 3/2 * lambda * rs * normrho_z_eq_0_eqn_8_4(r) * r * r
+local function f_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4(r)
+	return 3/2 * lambda * rs * normrho_for_r_z_eq_0_eqn_8_4(r) * r * r
 end
 
 --[[
@@ -1661,7 +1698,7 @@ From section 8, bottom of page 186, first column:
 but for circular velocity I still need a definition of normphi ...
 
 --]]
-local function g_for_r_eqn_5_3_based_on_normrho_z_eq_0_eqn_8_4(r)
+local function g_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4(r)
 	error'TODO'
 end
 
@@ -1857,9 +1894,18 @@ md = 8.08
 kspiral = 0.16	-- kpc?
 rspiral = 1.0	-- kpc
 gamma0 = 0.4
--- section 8 says "gamma0 = gammai = ...", section 9 says "gamma0 = 0.4" ... did section 9 mean to imply that "gammai = gamm0" still / always?
+-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 
+-- section 8 says "gamma0 = gammai = ...", section 9 says "gamma0 = 0.4" 
+-- ... did section 9 mean to imply that "gammai = gamm0" still / always / for NGC 3115 as well?
 gammai = gamma0
-y0 = 0.4
+
+-- the paper says:
+--y0 = 0.4
+-- but the ridges on Fig 10.a don't rise nearly high enough (there's supposed to be concavity but with y0=0.4 there isn't)
+-- but with y0 = 4.0 it looks right: ... typo anyone?
+y0 = 4.0
+-- I'm guessing this can be validated with some least-squares calculations but meh, I'm not going to do it.  I'm doing enough work as it is.
+
 v = 0.3	-- v? nu? upsilon? 
 
 -- Section 9, just before eqn 9.1: "These current rings can be represented taking two terms (i = 0, 1) in Eq. (8.1)." 
@@ -2041,9 +2087,8 @@ gnuplot{
 	title = 'Normalized mass density of NGC 3115 (eqn 9.1a)',
 	log = 'xy',
 	xrange = {rvec[1], rvec[#rvec]},
-	yrange = {1e-6, 1},
+	--yrange = {1e-6, 1},
 	format = {y = '%.2e'},
-	-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 ... so I'm guessing
 	data = {
 		rvec,
 		rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a),
@@ -2066,7 +2111,7 @@ gnuplot{
 	title = 'Normalized mass density of NGC 3115 (eqn 9.1b)',
 	log = 'xy',
 	xrange = {rvec[1], rvec[#rvec]},
-	yrange = {1e-6, 1},
+	--yrange = {1e-6, 1},
 	format = {y = '%.2e'},
 	-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 ... so I'm guessing
 	data = {
