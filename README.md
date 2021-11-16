@@ -10,7 +10,8 @@ For NGC 1560 there are two sets of functions/parameters, one in section 7 and on
 CHECK:	Fig 1a: NGC 1560 - rotation velocity of a spheroid
 CHECK:	Fig 1a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeils 
 
-CHECK:	Fig 1b: NGC 1560 mass density and potential
+FIXME:	Fig 1b: NGC 1560 mass density
+CHECK:	Fig 1b: NGC 1560 gravitational potential
 
 CHECK:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
 CHECK:	Fig 2a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeils 
@@ -47,7 +48,7 @@ CHECK: 	Fig 7a: NGC 3198 normalized mass density corrected for high mass-to-ligh
 TODO:	Fig 7a:	NGC 3198 normalized mass density matching measured values.
 TODO:	Fig 7a: NGC 3198 - sampled normalized mass density from 1987 Kent .. can't find the values in the paper
 
-TODO:	Fig 7b: NGC 3198 normalized rotation curve.  
+TODO:	Fig 7b: NGC 3198 normalized rotation curve
 CHECK:	Fig 7b: NGC 3198 - sampled rotation curve from 1989 Begeman
 
 I also reconstructed the cited 2006 Cooperstock et al paper's rotation curve, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
