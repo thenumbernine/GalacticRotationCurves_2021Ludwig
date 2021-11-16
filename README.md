@@ -61,13 +61,13 @@ TODO:	Fig 8b:	NGC 3198 gravitational potential and gravitational potential deriv
 ### NGC 3115 ###
 
 CHECK:	Fig 9a:	NGC 3115 luminosity profile.
-CHECK:	Fig 9a: NGC 3115 - sampled luminosity from 1987 Capaccioli.
+CHECK:	Fig 9a: NGC 3115 - sampled luminosity from 1987 Capaccioli et al.
 
 CHECK:	Fig 9b:	NGC 3115 Sersic index.
 
-FIXME:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-light ratio population ... the peaks are in the right place but the wrong amplitude. 
+CHECK:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-light ratio population ... with the paper's values the peaks are in the right place but the wrong amplitude ... but swapping a "0.4" with a "4.0" fixes that. Paper typo?  Another typo: 9.1b doesn't match 9.1a unless you replace the r0 in its denom with a reff. 
 TODO	Fig 10a: NGC 3115 normalized mass density matching the samples 
-TODO:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli.
+FIXME:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.  1987 Capaccioli et al doesn't have these values.  How were they computed for 2021 Ludwig?
 
 TODO:	Fig 10b: NGC 3115 normalized rotation curve. 
 TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
@@ -77,7 +77,7 @@ TODO:	Fig 11a: NGC 3115 galactic width.
 TODO:	Fig 11b: NGC 3115 gravitational potential. 
 
 TODO:	Fig 12a: NGC 3115 normalized mass density with modified schwarzschild radius. 
-TODO:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli.
+TODO:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.
 
 TODO:	Fig 12b: NGC 3115 normalized rotation curve with modified schwarzschild radius. 
 TODO:	Fig 12b: NGC 3115 - sampled rotation curve from 1980 Rubin.

@@ -298,13 +298,51 @@ local function normrho_for_r_z_eq_0_eqn_9_1_a(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
 end
 
+--[[
+seems 9.1b is not equal to 9.1a
+eqn 9.1b: 
+	normrho(r) = Y(r) * ...
+		... exp( -(r/r0) ^ (1/sb(r)) )	for 0 <= r <= r0
+		... exp( -(r/r0) ^ (1/sd(r)) )	for r0 < r
+looks wrong
+eqn 9.1a: 
+	normrho(r) = Y(r) 10^(-2/5 (mu(r) - mu0))
+looks correct ... for mu(r) defined in eqn D.8:
+	mu(r) = mu0 + 5 / (2 * log(10)) * (r / reff) ^ (1 / s(r))
+
+combining eqn 9.1a (good) with eqn D.8:
+	normrho(r) = Y(r) exp(-(r/reff) ^ (1/s(r)))
+
+now my current eqn D.8 is using the s(r(alpha)) defintiion from eqn D.13:
+	s(alpha) = 
+		... sb(alpha) 	for 0 <= alpha <= alpha0
+		... sd(alpha) 	for alpha0 < alpha <= alphae
+		... se 			for alphae < alpha
+
+can you spot the difference?
+yup, 
+the good equation uses reff in the denominator 
+the bad equation uses r0 in the denominator 
+smh, another typo.
+--]]
 local function normrho_for_r_z_eq_0_eqn_9_1_b(r)
 	local alpha = alpha_for_r(r)
-	if alpha < alpha0 then
+	--[[ what the paper says ... THIS IS WRONG AND THE GRAPH DOESN'T MATCH 9.1a
+	if alpha <= alpha0 then
 		return Y_for_r_eqn_8_1(r) * math.exp(-(r / r0) ^ (1 / sb_for_alpha_eqn_D_17(alpha)))
 	else
 		return Y_for_r_eqn_8_1(r) * math.exp(-(r / r0) ^ (1 / sd_for_alpha_eqn_D_17(alpha)))
 	end
+	--]]
+	-- [[ what the math says.  THIS IS RIGHT.  AND THE GRAPH MATCHES 9.1a
+	if alpha <= alpha0 then
+		return Y_for_r_eqn_8_1(r) * math.exp(-(r / reff) ^ (1 / sb_for_alpha_eqn_D_17(alpha)))
+	elseif alpha <= alphae then
+		return Y_for_r_eqn_8_1(r) * math.exp(-(r / reff) ^ (1 / sd_for_alpha_eqn_D_17(alpha)))
+	else
+		return Y_for_r_eqn_8_1(r) * math.exp(-(r / reff) ^ (1 / se))
+	end
+	--]]
 end
 
 
@@ -2078,6 +2116,12 @@ local normrho_1987_Capaccioli_table_9 = rho_1987_Capaccioli_table_9 / rho_1987_C
 
 local rvec = makePow10Range(.01, lrho)
 
+--[[
+with paper's "y0 = 0.4" this is a FAIL ...
+xrange and yrange are good, peaks are in proper place, but peaks are wrong amplitude.
+maybe cuz nowhere is 'gammai' specified?
+but with my guess of a typo "y0 = 4.0" this is a CHECK -- looks correct.
+--]]
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_9.1a.svg",
@@ -2098,10 +2142,11 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1987 Capaccioli et al', with='points'},
 }
--- FAIL ...
--- xrange and yrange are good, peaks are in proper place, but peaks are wrong amplitude.
--- maybe cuz nowhere is 'gammai' specified?
 
+-- FAILS WITH THE INCORRECT EQUATION IN 9.1b
+-- unless of course I assumed wrong about how to fix 9.1a
+-- either way, now it looks right, now that I replaced the 9.1b denominator of r0 with reff  (and added a final piecewise boundary for s(r) = se)
+-- wrong yrange, but right peaks 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_9.1b.svg",
@@ -2123,7 +2168,6 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1987 Capaccioli et al', with='points'},
 }
--- FAIL, wrong yrange, but right peaks 
 
 
 -- TODO normalized rotation curve
