@@ -508,6 +508,22 @@ local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
 	return normrho_for_r_z_eqn_5_2_b(r,0)
 end
 
+-- this looks different than the symmath compiled function ... hmm ...
+local function normrho_for_r_z_eqn_5_2_b_in_lua(r,z)
+	local tmp = math.sqrt(b*b + z*z)
+	return 
+		(b*b / (3 * lambda)) * (
+			a*r*r 
+			+ (a + 3 * tmp) * (a + tmp)^2
+		) / (
+			(r*r + (a + tmp)^2)^(5/2)
+			* tmp^3
+		)
+end
+local function normrho_for_r_z_eq_0_eqn_5_2_b_in_lua(r)
+	return normrho_for_r_z_eqn_5_2_b_in_lua(r,0)
+end
+
 --[[
 also equation C.7
 φ = ϕ/c^2 ... WHY DO YOU HAVE TO USE TWO DIFFERENT PHIS!?!?!?!?
@@ -580,13 +596,19 @@ local function mu_for_alpha_eqn_D_11(alpha)
 	)
 end
 
+-- eqn D.12 but as a function of mu:
+local function normrho_for_mu_eqn_D_12_a(mu)
+	return 10 ^ ((-2/5) * (mu - mu0))
+end
+
 -- eqn D12
 -- depends upon s1 and s2 to be defined
 -- and those are only defined for NGC 1560 in Appendix D
 -- why are the labeled equations combining two equations into one?  how do you denote them?
 local function normrho_for_r_z_eq_0_eqn_D_12_a(r) 
 	local alpha = alpha_for_r(r)
-	return 10 ^ ((-2/5) * (mu_for_alpha_eqn_D_11(alpha) - mu0))
+	local mu = mu_for_alpha_eqn_D_11(alpha)
+	return normrho_for_mu_eqn_D_12_a(mu)
 end
 local function normrho_for_r_z_eq_0_eqn_D_12_b(r) 
 	if r <= r0 then
@@ -594,7 +616,6 @@ local function normrho_for_r_z_eq_0_eqn_D_12_b(r)
 	end
 	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
 end
-
 
 
 
@@ -1336,40 +1357,21 @@ gnuplot{
 
 
 --[[
-Fig 4 subtext:
-	The line in the left-hand side graphic shows the mass density
-	profile fitted to the observed luminosity profile of NGC 1560, repre-
-	sented by dots.
-BUT WHERE DID YOU GET THE DATA FROM?
-alright sifting through more sources.
-2010 Gentile et al has 
-	eqn 8: mu(x) = x/sqrt(1 + x^2) 
-	eqn 7: mu(x) = x/(1 + x^2)
-1992 Broeils has:
-	eqn in section 5.4: mu(x) = x / sqrt(1 + x^2)
-but in all these cases ... what is x?
---]]
---[[ this looks pretty wrong.
-local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(function(x) return 1 / x end)
-normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1]
---]]
---[[
-how about D.12.a? 
+eqn D.12.a:
 normrho(r) = 10^(-2/5 (mu(r) - mu0))
 this looks relaly really good
 but it doesn't fit the curve
 maybe cuz the curve was really wrong?
+but the curve is using d.12.a
+does that mean the curve uses another eqn for rho?
 --]]
 -- [[
-local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(function(mu)
-	return 10^(-2/5 * (mu - mu0))
-end)
+local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(normrho_for_mu_eqn_D_12_a)
 normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1] 
 --]]
 
 local rvec = makePow10Range(.01, rmax)
--- [[ maybe CHECK for the 2021 Ludwig curve
--- still working on the luminosity sample points (where did he get them from?)
+-- [[ ok now it's a CHECK for the points but a FIXME for the curve 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_D12_a.svg",
@@ -1389,7 +1391,7 @@ gnuplot{
 }
 --]]
 
--- [[ CHECK
+-- [[ ok now it's a CHECK for the points but a FIXME for the curve 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_D12_b.svg",
@@ -1410,6 +1412,8 @@ gnuplot{
 --]]
 
 -- [[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
+--local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
+local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b_in_lua)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
@@ -1420,7 +1424,7 @@ gnuplot{
 	log = 'x',
 	data = {
 		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b),
+		normrhovec / normrhovec[1],
 		r_in_kpc_1992_Broeils_table_3,
 		normrho_for_lum_1992_Broeils,
 	},
@@ -2155,12 +2159,8 @@ gnuplot{
 
 local r_in_kpc_1987_Capaccioli_table_9 = alpha_in_arcsec_1987_Capaccioli_table_9:map(r_for_alpha)
 
--- TODO hmm, how do you convert mu into rho ...?
--- lum * mass/lum = mass, right?
--- should this be "rho" or "M" ... ?
-local rho_1987_Capaccioli_table_9 = luminosity_1987_Capaccioli_table_9 * Upsilon
--- but then we normalize it anyways, so ... scaling shouldn't matter anyways
-local normrho_1987_Capaccioli_table_9 = rho_1987_Capaccioli_table_9 / rho_1987_Capaccioli_table_9[1]
+local normrho_1987_Capaccioli_table_9 = luminosity_1987_Capaccioli_table_9:map(normrho_for_mu_eqn_D_12_a)
+normrho_1987_Capaccioli_table_9 = normrho_1987_Capaccioli_table_9 / normrho_1987_Capaccioli_table_9[1]
 
 -- two graph contestants for the normalized mass density, each with their own set of problems:
 

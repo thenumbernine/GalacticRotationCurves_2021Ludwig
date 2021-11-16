@@ -25,8 +25,8 @@ CHECK:	Fig 3a: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 
 FIXME:	Fig 3b: NGC 1560 Sersic index
 
-CHECK:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b).
-TODO:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
+FIXME:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b). ... too far over
+CHECK:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
 
 TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ... so where do they get it from?)
 This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
@@ -67,8 +67,8 @@ CHECK:	Fig 9a: NGC 3115 - sampled luminosity from 1987 Capaccioli et al.
 CHECK:	Fig 9b:	NGC 3115 Sersic index.
 
 CHECK:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-light ratio population ... with the paper's values the peaks are in the right place but the wrong amplitude ... but swapping a "0.4" with a "4.0" fixes that. Paper typo?  Another typo: 9.1b doesn't match 9.1a unless you replace the r0 in its denom with a reff. 
+CHECK:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.  1987 Capaccioli et al doesn't have these values.  How were they computed for 2021 Ludwig?
 TODO	Fig 10a: NGC 3115 normalized mass density matching the samples 
-FIXME:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.  1987 Capaccioli et al doesn't have these values.  How were they computed for 2021 Ludwig?
 
 TODO:	Fig 10b: NGC 3115 normalized rotation curve. 
 TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
