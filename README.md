@@ -49,7 +49,7 @@ CHECK: 	Fig 7a: NGC 3198 normalized mass density corrected for high mass-to-ligh
 TODO:	Fig 7a:	NGC 3198 normalized mass density matching measured values.
 CHECK:	Fig 7a: NGC 3198 - sampled normalized mass density from 1987 Kent .. can't find the values in the paper
 
-TODO:	Fig 7b: NGC 3198 normalized rotation curve
+FIXME:	Fig 7b: NGC 3198 normalized rotation curve
 CHECK:	Fig 7b: NGC 3198 - sampled rotation curve from 1989 Begeman
 
 I also reconstructed the cited 2006 Cooperstock et al paper's rotation curve, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
@@ -57,7 +57,7 @@ Probably because I need to solve the Abel equations with NGC 3198's normrho and 
 
 CHECK:	Fig 8a: NGC 3198 galactic width.
 
-TODO:	Fig 8b:	NGC 3198 gravitational potential and gravitational potential derivative.
+FIXME:	Fig 8b:	NGC 3198 gravitational potential and gravitational potential derivative.
 
 
 ### NGC 3115 ###

@@ -6,7 +6,7 @@ end
 -- Reference: From Numath Library By Tuan Dang Trong in Fortran 77.
 -- C++ Release 1.0 By J-P Moreau, Paris.
 -- (www.jpmoreau.fr)
-local function J1(X)
+local function BesselFunctionFirstKindOrder1(X)
 --[[
 	***********************************************************************
 	This subroutine calculates the First Kind Bessel Function of
@@ -58,4 +58,4 @@ local function J1(X)
 	end
 end
 
-return J1
+return BesselFunctionFirstKindOrder1

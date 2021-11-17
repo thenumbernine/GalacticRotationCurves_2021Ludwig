@@ -7,7 +7,9 @@ local math = require 'ext.math'
 local gnuplot = require 'gnuplot'
 local matrix = require 'matrix'
 local symmath = require 'symmath'
+
 local J1 = require 'J1'
+local K = require 'K'
 		
 symmath.fixVariableNames = true
 symmath.tostring = symmath.export.SingleLine
@@ -345,61 +347,8 @@ local function normrho_for_r_z_eq_0_eqn_9_1_b(r)
 	--]]
 end
 
-
-local function newtonRootFind(f, df_dx, x0, ...)
-	local x = x0
-	local maxiter = 100
-	for iter=1,maxiter do
-		local f_val = f(x, ...)
-		local df_dx_val = df_dx(x, ...)
-		local dx = -f_val / df_dx_val
-		if math.abs(dx) < 1e-7 then break end 
-		x = x + dx
---[[
-		print(
-			'f = '..f_val
-			..' df_dz = '..df_dz_val
-			..' dz = '..dz
-			..' z = '..z
-		)
---]]
-		if iter == maxiter then return math.nan end
-	end
-	return x
-end
-
---[[
-if this is just a bisection method then it should initialize with f(xL) and f(xR) on either side of the root
-
---]]
-local function bisectRootFind(f, xL, xR, ...)
-	local fL = f(xL, ...)
-	local fR = f(xR, ...)
-	if (fL < 0) == (fR < 0) then
-		return false,
-			"can't do bisection without initializing with samples on opposite evaluations of the root\n"
-			.." f(xL="..xL..") = " .. fL .. "\n"
-			.." f(xR="..xR..") = " .. fR .. "\n"
-			.." for args = " .. require 'ext.tolua'{...}
-	end
-	local maxiter = 100
-	for i=1,maxiter do
-		local dx = xR - xL
-		local xmid = xL + .5 * dx 
-		if dx < 1e-15 then return xmid end
-		local fmid = f(xmid, ...)
-		
-		if (fmid < 0) == (fL < 0) then
-			xL, fL = xmid, fmid
-		else
-			xR, fR = xmid, fmid
-		end
-	end
-	return math.nan
-end
-
-
-
+local newtonRootFind = require 'newton'
+local bisectRootFind = require 'bisect'
 
 -- expressions ... putting all in one place so the symbolic vars will be too
 local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
@@ -568,6 +517,93 @@ local function normphi_for_r_z_eq_0_eqn_5_2_a(r)
 	return normphi_for_r_z_eqn_5_2_a(r,0)
 end
 
+local function galacticWidth_newton_f_lhs_based_on_eqn_5_2_b(r, z)
+	--return normrho_for_r_z_eqn_5_2_b(r, z) 		-- analytical, buggy
+	return normrho_for_r_z_eqn_5_2_b_in_lua(r, z)
+end
+
+local function galacticWidth_newton_f_rhs(r, z)
+	--return eqn_6_9_rhs_over_lambda(r, delta)
+	return math.exp(-.5*l*l) 
+end
+
+-- f = eqn 5.2b - exp(-l^2/2)
+local function galacticWidth_newton_f_root_based_on_eqn_5_2_b(z, r) 
+	--return eqn_6_9_root_expr_based_on_5_2_b(r, z)		-- ... buggy or not, idk ???
+	return galacticWidth_newton_f_lhs_based_on_eqn_5_2_b(r, z) - galacticWidth_newton_f_rhs(r, z)
+end
+	
+-- df/dz = d/dz (eqn 5.2b)
+local function galacticWidth_newton_df_dz_based_on_eqn_5_2_b(z, r)
+	-- analytical is buggy maybe ???
+	return dz_eqn_6_9_root_expr_based_on_5_2_b(r, z)
+end
+
+--[[
+equation C9
+this is solving the nonlinear equation:
+	normrho(r,z) = exp(-1/2 l^2) for z, for fixed r
+where 5.2b = C.9 / lambda = normrho(r,z)
+
+so that means we need to solve this but replace normrho(r,z) with whatever eqn we want, usu 5.2b?
+nah, it looks good enough.
+--]]
+local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
+	--[[ I think the function generation is screwing up, esp for df/dz ...
+	return newtonRootFind(galacticWidth_newton_f_root_based_on_eqn_5_2_b, galacticWidth_newton_df_dz_based_on_eqn_5_2_b, 1, nil, r)
+	--]]
+	-- [[ looks good, but how do you determine deltamax?
+	return bisectRootFind(galacticWidth_newton_f_root_based_on_eqn_5_2_b, 0, 20, nil, r) or math.nan
+	--]]
+end
+
+local function makeGalaxyWidthGraphs(figname, name)
+	local rvec = xvec * rmax
+	timer('plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b', function()
+		gnuplot{
+			terminal = 'svg size 1024,768 background rgb "white"',
+			output = figname.."_NGC_"..name.."_galactic_width_eqn_C9.svg",
+			style = 'data lines',
+			xlabel = "r (kpc)",
+			ylabel = "δ (kpc)",
+			title = "Galactic width of NGC "..name,
+			data = {rvec, rvec:map(galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b)},
+			{using='1:2', title=''},
+		}
+	end)
+end
+
+-- integration format: integrate(f, xL, xR, n)
+local integrateRectangular = require 'integraterectangular'
+local integrateTrapezoid = require 'integratetrapezoid'
+local integrateSimpson = require 'integratesimpson'
+local integrateSimpson3_8 = require 'integratesimpson2'
+
+local function normphi_for_r_z_eq_0_eqn_C_17(r)
+	local epsilon = 1e-5
+	return 
+		-math.sqrt(2 / math.pi) * 3/2 * lambda * rs * r 
+			* integrate(function(m)
+				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
+				return 
+					K(m / (2 * math.sqrt(m * (1 - m))))
+					* tmp^(3/2)
+					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
+					* normrho_z_eq_0(tmp * r)
+			end, epsilon, 1 - epsilon)
+		- math.sqrt(2 / math.pi) * 2/3 * lambda * rs * r
+			* integrate(function(m)
+				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
+				return 
+					K(m / (2 * math.sqrt(m * (1 - m))))
+					* tmp^(3/2)
+					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
+					* normrho_z_eq_0(tmp * r)
+			end, mmin, 1 - epsilon)
+end
+
+
+
 --[[
 section 5 after eqn 5.3:
 it says the point of evaluation being separate from r=0
@@ -583,7 +619,10 @@ so this makes the smooth graphs of a spheroid rotation curve.
 
 how to get the bumpy ones? 
 maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
-yes, sure enough, (down at the Fig_4b graphs) they replace the f(r) and g(r)
+yes, sure enough, (down at the Fig__4b graphs) they replace the f(r) and g(r)
+
+NOTICE -
+- this is based on the spheroid functions, not the varying normphi/normrho of 5.2ab
 --]]
 local function makeRotationCurve(f, g)
 	local r = lbeta
@@ -892,7 +931,7 @@ local beta_corr_1992_Broeils = v_corr_in_km_per_s_1992_Broeils * 1000 / c_in_m_p
 local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
+	output = "Fig__1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
 	style = 'data lines',
 	xlabel = "r (kpc)",
 	ylabel = 'v/c',
@@ -919,7 +958,7 @@ local function betacirc_for_r_eqn_4_14(r)
 end
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_2a_NGC_1560_rotation_velocity_of_spheriod_eqn_4.14.svg",
+	output = "Fig__2a_NGC_1560_rotation_velocity_of_spheriod_eqn_4.14.svg",
 	style = 'data lines',
 	xlabel = 'r (kpc)',
 	xrange = {rvec[1], rvec[#rvec]},
@@ -967,7 +1006,7 @@ local normrhovec = rhovec / math.abs(rhovec[1])
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_1b_NGC_1560_mass_density_and_potential_eqn_5.2.svg",
+	output = "Fig__1b_NGC_1560_mass_density_and_potential_eqn_5.2.svg",
 	style = 'data lines',
 	xlabel = "r (kpc)",
 	xrange = {rvec[1], rvec[#rvec]},
@@ -1036,7 +1075,7 @@ local alphavec = xvec * alphae
 -- looks like figure 3 lhs
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_3a_NGC_1560_luminosity_eqn_D11_using_appendix_D_numbers.svg",
+	output = "Fig__3a_NGC_1560_luminosity_eqn_D11_using_appendix_D_numbers.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "μ (mag arcsec^-2)",
 	style = 'data lines',
@@ -1175,7 +1214,7 @@ mu(r) = mu0 - 5/2 log10(normrho)
 local rvec = xvec * lbeta
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_2b_NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
+	output = "Fig__2b_NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "μ_B (mag arcsec^-2)",	
 	style = 'data lines',
@@ -1308,11 +1347,12 @@ alphamax = alpha_for_r(rmax)
 -- instead it turns out the alpha (arcsec) associated with the distance of lrho = 5.13 kpc , 
 -- which is the furthest distance specified in the figure 3 subtext.
 
-
+--[[
+--]]
 local rvec = xvec * rmax
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_5b_NGC_1560_Gravitational_potential.svg",
+	output = "Fig__5b_NGC_1560_Gravitational_potential.svg",
 	style = 'data lines',
 	xlabel = "r (kpc)",
 	xrange = {rvec[1], rvec[#rvec]},
@@ -1359,7 +1399,7 @@ local alphavec = xvec * alphae
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_3b_NGC_1560_Sersic_index_eqn_D13.svg",
+	output = "Fig__3b_NGC_1560_Sersic_index_eqn_D13.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "s",
 	style = 'data lines',
@@ -1378,7 +1418,7 @@ local function S_eqn_D_19(alpha)
 end
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_3b_NGC_1560_Sersic_index_eqn_D19.svg",
+	output = "Fig__3b_NGC_1560_Sersic_index_eqn_D19.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "s",
 	style = 'data lines',
@@ -1409,7 +1449,7 @@ local rvec = makePow10Range(.01, rmax)
 -- [[ ok now it's a CHECK for the points but a FIXME for the curve 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_D12_a.svg",
+	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_D12_a.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -1429,7 +1469,7 @@ gnuplot{
 -- [[ ok now it's a CHECK for the points but a FIXME for the curve 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_D12_b.svg",
+	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_D12_b.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -1451,7 +1491,7 @@ gnuplot{
 local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b_in_lua)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
+	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -1486,106 +1526,7 @@ and then you look at C.18, and just give up all hope.
 --local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
 
 
--- trying to get this ... can't get it fro 1560 or 3198
-local function makeGalaxyWidthGraphs(figname, name)
-
-	local function f_lhs(r, z)
-		--return normrho_for_r_z_eqn_5_2_b(r, z) 		-- analytical, buggy
-		return normrho_for_r_z_eqn_5_2_b_in_lua(r, z)
-	end
-
-	local function f_rhs(r, z)
-		--return eqn_6_9_rhs_over_lambda(r, delta)
-		return math.exp(-.5*l*l) 
-	end
-
-	-- f = eqn 5.2b - exp(-l^2/2)
-	local function newton_f(z, r) 
-		--return eqn_6_9_root_expr_based_on_5_2_b(r, z)		-- ... buggy or not, idk ???
-		return f_lhs(r, z) - f_rhs(r, z)
-	end
-	
-	-- df/dz = d/dz (eqn 5.2b)
-	local function newton_df_dz(z, r)
-		-- analytical is buggy maybe ???
-		return dz_eqn_6_9_root_expr_based_on_5_2_b(r, z)
-	end
-
-	do
-		local r = 1
-		local deltavec = xvec
-		gnuplot{
-			terminal = 'svg size 1024,768 background rgb "white"',
-			output = figname.."_NGC_"..name.."_eqn_C9_f_lhs_rhs.svg",
-			style = 'data lines',
-			xlabel = "δ (kpc)",
-			title = 'eqn C.9 f / lambda lhs & rhs for root finding delta based on eqn 5.2b',
-			data = {
-				deltavec,
-				deltavec:map(function(delta) return f_lhs(r, delta) end),
-				deltavec:map(function(delta) return f_rhs(r, delta) end),
-			},
-			{using='1:2', title='lhs'},
-			{using='1:3', title='rhs'},
-		}
-		gnuplot{
-			terminal = 'svg size 1024,768 background rgb "white"',
-			output = figname.."_NGC_"..name.."_eqn_C9_f.svg",
-			style = 'data lines',
-			xlabel = "δ (kpc)",
-			title = 'f for root finding delta based on norm rho of eqn 5.2b',
-			data = {
-				deltavec,
-				deltavec:map(function(delta) return newton_f(r, delta) end),
-			},
-			{using='1:2', title=''},
-		}
-		gnuplot{
-			terminal = 'svg size 1024,768 background rgb "white"',
-			output = figname.."_NGC_"..name.."_eqn_C9_df.svg",
-			style = 'data lines',
-			xlabel = "δ (kpc)",
-			title = 'df for root finding delta based on norm rho of eqn 5.2b',
-			data = {
-				deltavec,
-				deltavec:map(function(delta) return newton_df_dz(r, delta) end),
-			},
-			{using='1:2', title=''},
-		}
-	end
-
-	--[[
-	equation C9
-	this is solving the nonlinear equation:
-		normrho(r,z) = exp(-1/2 l^2) for z, for fixed r
-	where 5.2b = C.9 / lambda = normrho(r,z)
-	
-	so that means we need to solve this but replace normrho(r,z) with whatever eqn we want, usu 5.2b
-	--]]
-	local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
-		--[[ I think the function generation is screwing up, esp for df/dz ...
-		return newtonRootFind(newton_f, newton_df_dz, 1, r)
-		--]]
-		-- [[ how do you determine deltamax?
-		return bisectRootFind(newton_f, 0, 20, r) or math.nan
-		--]]
-	end
-	local rvec = xvec * rmax
-	timer('plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b', function()
-		gnuplot{
-			terminal = 'svg size 1024,768 background rgb "white"',
-			output = figname.."_NGC_"..name.."_galactic_width_eqn_C9.svg",
-			style = 'data lines',
-			xlabel = "r (kpc)",
-			ylabel = "δ (kpc)",
-			title = "Galactic width of NGC "..name,
-			data = {rvec, rvec:map(galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b)},
-			{using='1:2', title=''},
-		}
-	end)
-end
-
-makeGalaxyWidthGraphs('Fig_5a', '1560')
+makeGalaxyWidthGraphs('Fig__5a', '1560')
 
 -- TODO gravitational potential
 
@@ -1754,7 +1695,7 @@ local alpha_in_arcsec_1987_Kent_table_2, luminosity_1987_Kent_table_2, mu_minor_
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_6a_NGC_3198_luminosity_eqn_D11.svg",
+	output = "Fig__6a_NGC_3198_luminosity_eqn_D11.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "μ (mag arcsec^-2)",
 	style = 'data lines',
@@ -1778,7 +1719,7 @@ gnuplot{
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_6b_NGC_3198_Sersic_index_eqn_D13.svg",
+	output = "Fig__6b_NGC_3198_Sersic_index_eqn_D13.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "s",
 	style = 'data lines',
@@ -1801,7 +1742,7 @@ local normrho_1987_Kent_table_2 = rho_1987_Kent_table_2 / rho_1987_Kent_table_2[
 local rvec = makePow10Range(.1, lrho)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_7a_NGC_3198_normalized_mass_density_eqn_5.2b.svg",
+	output = "Fig__7a_NGC_3198_normalized_mass_density_eqn_5.2b.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
@@ -1929,7 +1870,7 @@ local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
 --local rvec = xvec * rmax	-- equivalent, since rmax = 30.7, and lbeta = 29.4
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_7b_NGC_3198_normalized_rotation_curve.svg",
+	output = "Fig__7b_NGC_3198_normalized_rotation_curve.svg",
 	xlabel = "r (kpc)",
 	ylabel = "v / c",
 	style = 'data lines',
@@ -2020,7 +1961,7 @@ hmm, where's the equation for delta(r)?
 
 I'm trying to generalize the rotation curve generation too quickly in this function:
 --]]
-makeGalaxyWidthGraphs('Fig_8a', '3198')
+makeGalaxyWidthGraphs('Fig__8a', '3198')
 
 --[[ From section 8, bottom of page 186, first column:
 The circular velocity approximation, if applied to the gravitational
@@ -2037,7 +1978,7 @@ end)
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_8b_NGC_3198_gravitational_potential_eqn_C7.svg",
+	output = "Fig__8b_NGC_3198_gravitational_potential_eqn_C7.svg",
 	style = 'data lines',
 	xlabel = "r (kpc)",
 	format = {y = '%.2e'},
@@ -2246,7 +2187,7 @@ local alpha_in_arcsec_1987_Capaccioli_et_al_table_9 = alpha_in_arcsec_qtrt_1987_
 local alphavec = xvec * alphae
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_9a_NGC_3115_luminosity_eqn_D11.svg",
+	output = "Fig__9a_NGC_3115_luminosity_eqn_D11.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "μ (mag arcsec^-2)",
 	style = 'data lines',
@@ -2267,7 +2208,7 @@ gnuplot{
 local alphavec = makePow10Range(0.1, alphae)	-- where does the rmax range come from?
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_9b_NGC_3115_Sersic_index_eqn_D13.svg",
+	output = "Fig__9b_NGC_3115_Sersic_index_eqn_D13.svg",
 	xlabel = "α (arcsec)",
 	ylabel = "s",
 	style = 'data lines',
