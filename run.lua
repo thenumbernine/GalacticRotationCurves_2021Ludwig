@@ -872,7 +872,7 @@ gnuplot{
 	},
 	key = 'bottom right',
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 
 -- eqn 3.17:
@@ -901,8 +901,8 @@ gnuplot{
 	},
 	{using='1:2', title='2021 Ludwig, β-circular'},
 	{using='1:3', title='2021 Ludwig, β'},
-	{using='4:5', title='1992 Broeils, β-corrected', with='points'},	-- is in the 2021 Ludwig paper
-	--{using='4:6', title='beta 1992 Broeils', with='points'},			-- *NOT* in 2021 Ludwig paper
+	{using='4:5', title='1992 Broeils, β-corrected', with='points pointtype 7'},	-- is in the 2021 Ludwig paper
+	--{using='4:6', title='beta 1992 Broeils', with='points pointtype 7'},			-- *NOT* in 2021 Ludwig paper
 }
 -- CHECK
 
@@ -1015,7 +1015,7 @@ gnuplot{
 		luminosity_1992_Broeils,
 	},
 	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1992 Broeils', with='points'}, 
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
 }
 
 
@@ -1165,7 +1165,7 @@ gnuplot{
 		luminosity_1992_Broeils,
 	},
 	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1992 Broeils', with='points'}, 
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
 }
 
 
@@ -1387,7 +1387,7 @@ gnuplot{
 		normrho_for_lum_1992_Broeils,
 	},
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 --]]
 
@@ -1407,7 +1407,7 @@ gnuplot{
 		normrho_for_lum_1992_Broeils,
 	},
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 --]]
 
@@ -1429,7 +1429,7 @@ gnuplot{
 		normrho_for_lum_1992_Broeils,
 	},
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 --]]
 
@@ -1647,6 +1647,47 @@ lrho_check = r_for_alpha(alphae)	-- lrho_check = 14.130185624146 vs 14.1 ... clo
 rs_check = rs_eqn_4_9_a()			-- rs_check = 1.1966867034874e-05 vs 1.20e-5 ... check 
 lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.0032370645736991 vs 0.00323 ... check
 
+
+-- column 1 is in arcsec, 
+-- column 2 is major mu in mag/arcsec^2
+-- column 2 is minor mu in mag/arcsec^2
+local alpha_in_arcsec_1987_Kent_table_2, luminosity_1987_Kent_table_2, mu_minor_1987_Kent_table_2  = matrix{
+	{0.00,		19.49,	19.49},
+	{2.95,		19.58,	19.82},
+	{5.91,		19.74,	20.24},
+	{8.86,		19.91,	20.56},
+	{11.82,		20.09,	20.79},
+	{14.77,		20.24,	20.95},
+	{17.72,		20.38,	21.03},
+	{20.68,		20.51,	21.10},
+	{23.63,		20.62,	21.19},
+	{26.59,		20.71,	21.30},
+	{29.54,		20.79,	21.40},
+	{33.15,		20.88,	21.56},
+	{37.05,		20.95,	21.83},
+	{41.31,		21.00,	22.12},
+	{45.99,		21.05,	22.44},
+	{51.12,		21.10,	22.75},
+	{56.77,		21.16,	22.97},
+	{60*1.05,	21.25,	23.18},
+	{60*1.16,	21.35,	23.46},
+	{60*1.29,	21.45,	24.04},
+	{60*1.43,	21.63,	24.58},
+	{60*1.58,	21.89,	24.82},
+	{60*1.75,	22.17,	math.nan},
+	{60*1.94,	22.47,	math.nan},
+	{60*2.14,	22.76,	math.nan},
+	{60*2.37,	22.98,	math.nan},
+	{60*2.62,	23.17,	math.nan},
+	{60*2.90,	23.43,	math.nan},
+	{60*3.20,	24.00,	math.nan},
+	{60*3.54,	24.55,	math.nan},
+	{60*3.91,	24.90,	math.nan},
+	{60*4.32,	25.15,	math.nan},
+	{60*4.78,	25.41,	math.nan},
+	{60*5.28,	25.90,	math.nan},
+}:T():unpack()
+
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_6a_NGC_3198_luminosity_eqn_D11.svg",
@@ -1656,8 +1697,14 @@ gnuplot{
 	title = "Luminosity profile of NGC 3198",
 	xrange = {0, alphae},
 	yrange = {[3] = 'reverse'},
-	data = {alphavec, alphavec:map(mu_for_alpha_eqn_D_8)},
-	{using='1:2', title=''}, 
+	data = {
+		alphavec,
+		alphavec:map(mu_for_alpha_eqn_D_8),
+		alpha_in_arcsec_1987_Kent_table_2,
+		luminosity_1987_Kent_table_2,
+	},
+	{using='1:2', title='2021 Ludwig'}, 
+	{using='3:4', title='1987 Kent', with='points pointtype 7'}, 
 }
 -- CHECK.  good.
 -- though there is a hiccup in the sd->sb transition at alpha0
@@ -1679,6 +1726,12 @@ gnuplot{
 -- CHECK.  good.
 -- same as prev graph: fix the hiccup.
 
+local r_in_kpc_1987_Kent_table_2 = alpha_in_arcsec_1987_Kent_table_2:map(r_for_alpha)
+-- [[ this is my go-to for making normrho from lum for sampled data ...
+local rho_1987_Kent_table_2 = luminosity_1987_Kent_table_2:map(normrho_for_mu_eqn_D_12_a)
+local normrho_1987_Kent_table_2 = rho_1987_Kent_table_2 / rho_1987_Kent_table_2[1]
+--]]
+
 -- "The mass density profile extends to the last measurement taken at lrho = 1.41 kpc"
 -- so looks like this mass density graph uses lrho as the rmax instead of rmax (like I think figure 3 used)
 local rvec = makePow10Range(.1, lrho)
@@ -1692,8 +1745,14 @@ gnuplot{
 	log = 'xy',
 	xrange = {.1, lrho},
 	yrange = {.002, 2},
-	data = {rvec, rvec:map(normrho_for_r_z_eq_0_eqn_8_4)},
-	{using='1:2', title=''},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4),
+		r_in_kpc_1987_Kent_table_2,
+		normrho_1987_Kent_table_2,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Kent', with='points pointtype 7'},
 }
 
 --[[
@@ -1715,7 +1774,7 @@ Actually the paper doesn't say it uses d=9.4 Mpc, it says that its table is from
 row #1 is arcminutes
 row #2 is velocity in km/s
 --]]
-local _1989_Begeman_table_2 = table{	-- r is in arcmin, v is in km/s
+local _1989_Begeman_table_2 = table{
 	{0.25,	55},
 	{0.5,	92},
 	{0.75,	110},
@@ -1819,7 +1878,7 @@ gnuplot{
 		beta_1989_Begeman,
 	},
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1989 Begeman', with='points'},
+	{using='3:4', title='1989 Begeman', with='points pointtype 7'},
 }
 -- FAIL
 
@@ -2040,7 +2099,7 @@ lrho_check = r_for_alpha(alphae)		-- lrho_check = 47.679001468717 vs 47.7 ... cl
 -- 1st col is alpha^(1/4), in arcseconds, so ^4 it to get the arcseconds
 -- 2nd col is the final processing major (axis?) luminosity in mag/arcsec^2 ... this is the one that the 2021 Ludwig paper uses
 -- 3rd col is the final processing minor (axis?), which I don't think the paper uses ... and isn't complete anyways ...
-local _1987_Capaccioli_table_9 = table{
+local _1987_Capaccioli_et_al_table_9 = table{
 	{0.65,	15.34,	15.35},
 	{0.70,	15.36,	15.38},
 	{0.75,	15.37,	15.42},
@@ -2116,8 +2175,8 @@ local _1987_Capaccioli_table_9 = table{
 	{5.50,	29.14,	math.nan},
 	{5.60,	29.42,	math.nan},
 }
-local alpha_in_arcsec_qtrt_1987_Capaccioli_table_9, luminosity_1987_Capaccioli_table_9 = matrix(_1987_Capaccioli_table_9):T():unpack()
-local alpha_in_arcsec_1987_Capaccioli_table_9 = alpha_in_arcsec_qtrt_1987_Capaccioli_table_9:map(function(x) return x*x*x*x end)
+local alpha_in_arcsec_qtrt_1987_Capaccioli_et_al_table_9, luminosity_1987_Capaccioli_et_al_table_9 = matrix(_1987_Capaccioli_et_al_table_9):T():unpack()
+local alpha_in_arcsec_1987_Capaccioli_et_al_table_9 = alpha_in_arcsec_qtrt_1987_Capaccioli_et_al_table_9:map(function(x) return x*x*x*x end)
 
 
 local alphavec = xvec * alphae
@@ -2133,11 +2192,11 @@ gnuplot{
 	data = {
 		alphavec,
 		alphavec:map(mu_for_alpha_eqn_D_8),
-		alpha_in_arcsec_1987_Capaccioli_table_9,
-		luminosity_1987_Capaccioli_table_9,
+		alpha_in_arcsec_1987_Capaccioli_et_al_table_9,
+		luminosity_1987_Capaccioli_et_al_table_9,
 	},
 	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1987 Capaccioli et al', with='points'}, 
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'}, 
 }
 -- CHECK
 
@@ -2157,16 +2216,17 @@ gnuplot{
 }
 -- CHECK
 
-local r_in_kpc_1987_Capaccioli_table_9 = alpha_in_arcsec_1987_Capaccioli_table_9:map(r_for_alpha)
-
-local normrho_1987_Capaccioli_table_9 = luminosity_1987_Capaccioli_table_9:map(normrho_for_mu_eqn_D_12_a)
-normrho_1987_Capaccioli_table_9 = normrho_1987_Capaccioli_table_9 / normrho_1987_Capaccioli_table_9[1]
+local r_in_kpc_1987_Capaccioli_et_al_table_9 = alpha_in_arcsec_1987_Capaccioli_et_al_table_9:map(r_for_alpha)
+-- [[ I guess this is the way to convert from mu to rho ?  seems to work in fig 4 and here
+local rho_1987_Capaccioli_et_al_table_9 = luminosity_1987_Capaccioli_et_al_table_9:map(normrho_for_mu_eqn_D_12_a)
+local normrho_1987_Capaccioli_et_al_table_9 = rho_1987_Capaccioli_et_al_table_9 / rho_1987_Capaccioli_et_al_table_9[1]
+--]]
 
 -- two graph contestants for the normalized mass density, each with their own set of problems:
 
 local rvec = makePow10Range(.01, lrho)
 
---[[
+--[[ CHECK
 with paper's "y0 = 0.4" this is a FAIL ...
 xrange and yrange are good, peaks are in proper place, but peaks are wrong amplitude.
 maybe cuz nowhere is 'gammai' specified?
@@ -2186,11 +2246,11 @@ gnuplot{
 	data = {
 		rvec,
 		rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a),
-		r_in_kpc_1987_Capaccioli_table_9,
-		normrho_1987_Capaccioli_table_9,
+		r_in_kpc_1987_Capaccioli_et_al_table_9,
+		normrho_1987_Capaccioli_et_al_table_9,
 	},
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1987 Capaccioli et al', with='points'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
 }
 
 -- [[ CHECK
@@ -2213,11 +2273,11 @@ gnuplot{
 	data = {
 		rvec,
 		rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b),
-		r_in_kpc_1987_Capaccioli_table_9,
-		normrho_1987_Capaccioli_table_9,
+		r_in_kpc_1987_Capaccioli_et_al_table_9,
+		normrho_1987_Capaccioli_et_al_table_9,
 	},
 	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1987 Capaccioli et al', with='points'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
 }
 --]]
 
