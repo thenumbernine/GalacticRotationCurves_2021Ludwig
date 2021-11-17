@@ -2,6 +2,10 @@ I'm trying to reproduce the graphs in 2021 Ludwig.
 
 Seems the paper isn't very clear where it gets its graphs from (no explicit description of the rotation curve graph whatsoever) or on what equation the parameters that it lists are used in.
 
+Errors I think I've found:
+* NGC 3115 y0 = 4.0 instead of 0.4 makes the graph look correct.  Especially since NGC 3198 has a value of 8.0, in the same range.
+* Eqn 9.1b says `r / r0` but should say `r / reff` ... and maybe have a finally piecewise segment for `se`.
+
 
 ### NGC 1560 ###
 
@@ -57,7 +61,8 @@ Probably because I need to solve the Abel equations with NGC 3198's normrho and 
 
 CHECK:	Fig 8a: NGC 3198 galactic width.
 
-FIXME:	Fig 8b:	NGC 3198 gravitational potential and gravitational potential derivative.
+CLOSE:	Fig 8b:	NGC 3198 gravitational potential 
+TODO:	Fig 8b:	NGC 3198 gravitational potential derivative.
 
 
 ### NGC 3115 ###
@@ -67,7 +72,7 @@ CHECK:	Fig 9a: NGC 3115 - sampled luminosity from 1987 Capaccioli et al.
 
 CHECK:	Fig 9b:	NGC 3115 Sersic index.
 
-CHECK:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-light ratio population ... with the paper's values the peaks are in the right place but the wrong amplitude ... but swapping a "0.4" with a "4.0" fixes that. Paper typo?  Another typo: 9.1b doesn't match 9.1a unless you replace the r0 in its denom with a reff. 
+CHECK:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-light ratio population 
 CHECK:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.  1987 Capaccioli et al doesn't have these values.  How were they computed for 2021 Ludwig?
 TODO	Fig 10a: NGC 3115 normalized mass density matching the samples 
 
@@ -76,7 +81,8 @@ TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
 
 CHECK:	Fig 11a: NGC 3115 galactic width. 
 
-TODO:	Fig 11b: NGC 3115 gravitational potential. 
+CLOSE:	Fig 11b: NGC 3115 gravitational potential
+TODO:	Fig 11b: NGC 3115 gravitational potential derivative
 
 TODO:	Fig 12a: NGC 3115 normalized mass density with modified schwarzschild radius. 
 TODO:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.

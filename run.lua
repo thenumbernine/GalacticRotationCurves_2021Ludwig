@@ -250,6 +250,15 @@ local function Y_for_r_eqn_8_1(r)
 	return sum
 end
 
+-- eqn D8, doesn't require alpha1 (derived from r1) or alpha0 (derived from r0) or s2, like eqn D11 requires
+-- but what is "s" ?
+-- after eqn D1: "where s is the Sersic index"
+-- but this 's' varies with alpha ... correct?
+local function mu_for_alpha_eqn_D_8(alpha)
+	local s = s_for_alpha_eqn_D_13(alpha)
+	return mu0 + 5 / (2 * math.log(10)) * (alpha / alphaeff) ^ (1 / s)
+end
+
 -- eqn 8.5
 -- basically same as S(alpha) from eqn D13, but with (r, r0, re) swapped with (alpha, alpha0, alphae)
 local function s_for_r_eqn_8_5(r)
@@ -271,9 +280,17 @@ local function s_for_r_eqn_8_5(r)
 	--]]
 end
 
+-- eqn 8.4a
+-- also eqn 9.1a (which I got to match eqn 9.1b)
+-- does this mean that eqn 8.4b == eqn 9.1b ?
+local function normrho_for_r_z_eq_0_eqn_8_4_a(r)
+	local alpha = alpha_for_r(r)
+	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
+end
+
 -- eqn 8.4
 -- ... has both these equations ... and they aren't even equal ... smh
-local function normrho_for_r_z_eq_0_eqn_8_4(r)
+local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	--[[ can't do this without s1 and s1 of the galaxy being defined ... which it is not for NGC 3198
 	local alpha = alpha_for_r(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))
@@ -284,20 +301,6 @@ local function normrho_for_r_z_eq_0_eqn_8_4(r)
 		* math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
 	--]]
 	-- "where s(r) is the Sérsic profile adjusted to the luminosity:"
-end
-
--- eqn D8, doesn't require alpha1 (derived from r1) or alpha0 (derived from r0) or s2, like eqn D11 requires
--- but what is "s" ?
--- after eqn D1: "where s is the Sersic index"
--- but this 's' varies with alpha ... correct?
-local function mu_for_alpha_eqn_D_8(alpha)
-	local s = s_for_alpha_eqn_D_13(alpha)
-	return mu0 + 5 / (2 * math.log(10)) * (alpha / alphaeff) ^ (1 / s)
-end
-
-local function normrho_for_r_z_eq_0_eqn_9_1_a(r)
-	local alpha = alpha_for_r(r)
-	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
 end
 
 --[[
@@ -579,14 +582,29 @@ local integrateTrapezoid = require 'integratetrapezoid'
 local integrateSimpson = require 'integratesimpson'
 local integrateSimpson3_8 = require 'integratesimpson2'
 
+local integrate = integrateRectangular
+--local integrate = integrateSimpson 
+
+-- eqn C.17
+-- normphi(r,0) is based on normrho(r,0)
 local function normphi_for_r_z_eq_0_eqn_C_17(r)
-	local epsilon = 1e-5
-	return 
-		-math.sqrt(2 / math.pi) * 3/2 * lambda * rs * r 
-			* integrate(function(m)
+	local epsilon = 1e-7
+	
+	-- normrho:
+	-- NGC 3198 uses eqn 8.4a
+	-- NGC 3115 shows 8.4a == 8.4b == 9.1b
+	local normrho_z_eq_0 = normrho_for_r_z_eq_0_eqn_8_4_a
+
+	-- eqn 6.7 and eqn C.16
+	local mmin = 4 * r * rmax / (r + rmax)^2
+	
+	-- eqn C.17:
+	local normphi =
+		-math.sqrt(2 / math.pi) * 3/2 * lambda * rs * r * 
+			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
-				return 
-					K(m / (2 * math.sqrt(m * (1 - m))))
+				return
+					K(m) / (2 * math.sqrt(m * (1 - m)))
 					* tmp^(3/2)
 					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
 					* normrho_z_eq_0(tmp * r)
@@ -595,11 +613,13 @@ local function normphi_for_r_z_eq_0_eqn_C_17(r)
 			* integrate(function(m)
 				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
 				return 
-					K(m / (2 * math.sqrt(m * (1 - m))))
+					K(m) / (2 * math.sqrt(m * (1 - m)))
 					* tmp^(3/2)
 					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
 					* normrho_z_eq_0(tmp * r)
 			end, mmin, 1 - epsilon)
+	print(r, mmin, normphi)
+	return normphi
 end
 
 
@@ -992,8 +1012,8 @@ local normphivec = phivec / math.abs(phivec[1])
 local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
 --]]
 --[[ can't do any of these, because it needs Y(r)'s order "YOrder" defined.
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4)
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a)
+local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
+local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_a)
 local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b)
 --]]
 --[[ can't do this because we're missing alpha0
@@ -1752,7 +1772,7 @@ gnuplot{
 	yrange = {.002, 2},
 	data = {
 		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_8_4),
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),
 		r_in_kpc_1987_Kent_table_2,
 		normrho_1987_Kent_table_2,
 	},
@@ -1836,8 +1856,8 @@ So can I use ϱ(r) to get f(r)?
 Looks like it, from the text under eqn 5.2, nice and easy:
 f(r) = (3/2) lambda rs normrho(r,0) r^2
 --]]
-local function f_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4(r)
-	return 3/2 * lambda * rs * normrho_for_r_z_eq_0_eqn_8_4(r) * r * r
+local function f_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4_b(r)
+	return 3/2 * lambda * rs * normrho_for_r_z_eq_0_eqn_8_4_b(r) * r * r
 end
 
 --[[
@@ -1854,7 +1874,7 @@ From section 8, bottom of page 186, first column:
 but for circular velocity I still need a definition of normphi ...
 
 --]]
-local function g_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4(r)
+local function g_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	error'TODO'
 end
 
@@ -1963,6 +1983,9 @@ I'm trying to generalize the rotation curve generation too quickly in this funct
 --]]
 makeGalaxyWidthGraphs('Fig__8a', '3198')
 
+
+local rvec = xvec * rmax
+
 --[[ From section 8, bottom of page 186, first column:
 The circular velocity approximation, if applied to the gravitational
 potential shown in Fig. 8, gives a strongly oscillating velocity ...
@@ -1985,23 +2008,14 @@ gnuplot{
 	title = 'Gravitational potential of NGC 3198',
 	data = {
 		rvec,
-		rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a),	-- FAIL
-		dr_normphi_vec 	-- FAIL
+		rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
+		--rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a),	-- FAIL
+		--dr_normphi_vec 	-- FAIL
 	},
 	{using='1:2', title='normphi'},
-	{using='1:3', title='d/dr normphi'},
+	--{using='1:3', title='d/dr normphi'},
 }
---[[
-FAIL
-this does not look like the graph at all
-the graph has waves like the density profile of the NGC 3198 ....
-so i'm thinking it's a different galaxy width
-Y(r) = 1 + sum ... this is the source of the waves in the profile ...
-so where else could Y(r) influence the gravitational potential?
-it is used in normrho(r,z) in eqn 8.4
-sure enough, from eqn C.4 and C.9 it looks like the rhs of the root-finding is when the z in rho(r,z) is replaced with delta(r) ... and they cross-multiply lambda ...
---]]
-
+-- CLOSE
 -- if I could match phi(r), then I bet I could match d/dr phi(r)
 -- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
 
@@ -2239,18 +2253,40 @@ but with my guess of a typo "y0 = 4.0" this is a CHECK -- looks correct.
 --]]
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_9.1a.svg",
+	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_8.4a.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
-	title = 'Normalized mass density of NGC 3115 (eqn 9.1a)',
+	title = 'Normalized mass density of NGC 3115 (eqn 8.4a)',
 	log = 'xy',
 	xrange = {rvec[1], rvec[#rvec]},
 	--yrange = {1e-6, 1},
 	format = {y = '%.2e'},
 	data = {
 		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_9_1_a),
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_a),
+		r_in_kpc_1987_Capaccioli_et_al_table_9,
+		normrho_1987_Capaccioli_et_al_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
+}
+
+-- CHECK
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_8.4b.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ / ρ0",
+	style = 'data lines',
+	title = 'Normalized mass density of NGC 3115 (eqn 8.4b)',
+	log = 'xy',
+	xrange = {rvec[1], rvec[#rvec]},
+	--yrange = {1e-6, 1},
+	format = {y = '%.2e'},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),
 		r_in_kpc_1987_Capaccioli_et_al_table_9,
 		normrho_1987_Capaccioli_et_al_table_9,
 	},
@@ -2259,7 +2295,7 @@ gnuplot{
 }
 
 -- [[ CHECK
--- FAILS WITH THE INCORRECT EQUATION IN 9.1b
+-- THIS FAILS WITH THE INCORRECT EQUATION IN 9.1b
 -- unless of course I assumed wrong about how to fix 9.1a -- THEN IT WORKS
 -- either way, now it looks right, now that I replaced the 9.1b denominator of r0 with reff  (and added a final piecewise boundary for s(r) = se)
 -- wrong yrange, but right peaks 
@@ -2288,9 +2324,22 @@ gnuplot{
 
 makeGalaxyWidthGraphs('Fig_11a', '3115')
 
--- TODO galactic width
-
 -- TODO gravitational potential
+local rvec = xvec * rmax
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_11b_NGC_3115_gravitational_potential_eqn_C7.svg",
+	style = 'data lines',
+	xlabel = "r (kpc)",
+	format = {y = '%.2e'},
+	title = 'Gravitational potential of NGC 3115',
+	data = {
+		rvec,
+		rvec:map(normphi_for_r_z_eq_0_eqn_C_17),
+	},
+	{using='1:2', title=''},
+}
+
 
 -- TODO normalized mass density with small increase in rs
 
