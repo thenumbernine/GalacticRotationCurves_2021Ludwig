@@ -346,13 +346,67 @@ local function normrho_for_r_z_eq_0_eqn_9_1_b(r)
 end
 
 
+local function newtonRootFind(f, df_dx, x0, ...)
+	local x = x0
+	local maxiter = 100
+	for iter=1,maxiter do
+		local f_val = f(x, ...)
+		local df_dx_val = df_dx(x, ...)
+		local dx = -f_val / df_dx_val
+		if math.abs(dx) < 1e-7 then break end 
+		x = x + dx
+--[[
+		print(
+			'f = '..f_val
+			..' df_dz = '..df_dz_val
+			..' dz = '..dz
+			..' z = '..z
+		)
+--]]
+		if iter == maxiter then return math.nan end
+	end
+	return x
+end
+
+--[[
+if this is just a bisection method then it should initialize with f(xL) and f(xR) on either side of the root
+
+--]]
+local function bisectRootFind(f, xL, xR, ...)
+	local fL = f(xL, ...)
+	local fR = f(xR, ...)
+	if (fL < 0) == (fR < 0) then
+		return false,
+			"can't do bisection without initializing with samples on opposite evaluations of the root\n"
+			.." f(xL="..xL..") = " .. fL .. "\n"
+			.." f(xR="..xR..") = " .. fR .. "\n"
+			.." for args = " .. require 'ext.tolua'{...}
+	end
+	local maxiter = 100
+	for i=1,maxiter do
+		local dx = xR - xL
+		local xmid = xL + .5 * dx 
+		if dx < 1e-15 then return xmid end
+		local fmid = f(xmid, ...)
+		
+		if (fmid < 0) == (fL < 0) then
+			xL, fL = xmid, fmid
+		else
+			xR, fR = xmid, fmid
+		end
+	end
+	return math.nan
+end
+
+
+
 
 -- expressions ... putting all in one place so the symbolic vars will be too
 local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
 local normphi_for_r_z_eqn_5_2_a 
-local eqn_C_9_root_expr_based_on_5_2_b, dz_eqn_C_9_root_expr_based_on_5_2_b	-- internal to the newton root-finder
-local galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b
-local eqn_C_9_rhs_over_lambda		-- purely for debugging
+local eqn_6_9_root_expr_based_on_5_2_b	-- internal to the newton root-finder
+local dz_eqn_6_9_root_expr_based_on_5_2_b
+local eqn_6_9_rhs_over_lambda		-- purely for debugging
 local dr_beta_for_r_eqn_5_1 		-- dbeta_dr(r, beta, f, g)
 local f_for_r_eqn_5_3
 local g_for_r_eqn_5_3
@@ -369,7 +423,11 @@ timer("deriving root-finding", function()
 		local argvars = table{symmath.vars('r', 'z')}
 		local r, z = argvars:unpack()
 		-- globals:
-		local a, b, l, lambda, mu0 = symmath.vars('a', 'b', 'l', 'lambda', 'mu0')
+		local a = var'a'
+		local b = var'b'
+		local l = var'l'
+		local lambda = var'lambda'
+		local mu0 = var'mu0'
 	
 
 		local beta = var('beta', {r})
@@ -416,11 +474,11 @@ timer("deriving root-finding", function()
 		local g_eqn_4_12_b_expr = g:eq(r * normphi:diff(r))
 		print('g for eqn 4.12b:', g_eqn_4_12_b_expr)
 
-		local f_eqn_5_3_expr = f_eqn_4_12_a_expr:subst(normrho_eqn_5_2_b_expr, z:eq(0))()
-		print('f for eqn 5.3:', f_eqn_5_3_expr)
+		local f_z_eq_0_eqn_5_3_expr = f_eqn_4_12_a_expr:subst(normrho_eqn_5_2_b_expr, z:eq(0))()
+		print('f(r,z=0) for eqn 5.3 with normrho eqn 5.2b:', f_z_eq_0_eqn_5_3_expr)
 		
-		local g_eqn_5_3_expr = g_eqn_4_12_b_expr:subst(normphi_eqn_5_2_a_expr, z:eq(0))()
-		print('g for eqn 5.3:', g_eqn_5_3_expr)
+		local g_z_eq_0_eqn_5_3_expr = g_eqn_4_12_b_expr:subst(normphi_eqn_5_2_a_expr, z:eq(0))()
+		print('g(r,z=0) for eqn 5.3 with normphi eqn 5.2a:', g_z_eq_0_eqn_5_3_expr)
 
 		
 		-- solving eqn 5.1 for dbeta/dr, but preserving f(r) and g(r) instead of analytically simplifying their replacement in, like eqn 5.3 does ...
@@ -441,23 +499,27 @@ timer("deriving root-finding", function()
 --]]
 
 		-- eqn C.9 
+		-- also eqn 6.9
+		-- also eqn 6.11 is the same when z=0
 		-- uses a normalized density function based on eqn C.4
-		local eqn_C_9_rhs_over_lambda_expr = exp(-l^2 / 2)
+		-- this is just setting eqn 5.2b * lambda = eqn 6.9 * lambda
+		
+		local eqn_6_9_rhs_over_lambda_expr = exp(-l^2 / 2)
 
 		-- TODO eqn C.9 modified with a normalized density function based on eqn D.12
 
 
-		local eqn_C_9_root_expr_based_onn_5_2_b_expr = normrho_eqn_5_2_b_expr:rhs() - eqn_C_9_rhs_over_lambda_expr
-		print(eqn_C_9_root_expr_based_onn_5_2_b_expr)
+		local eqn_6_9_root_expr_based_on_5_2_b_expr = normrho_eqn_5_2_b_expr:rhs() - eqn_6_9_rhs_over_lambda_expr
+		print(eqn_6_9_root_expr_based_on_5_2_b_expr)
 	
 		-- TODO - Variable evaluateDerivative is commented out in Variable because it is also duplciated in Derivative's prune() rule ...
 		
-		local dz_eqn_C_9_root_expr = eqn_C_9_root_expr_based_onn_5_2_b_expr:diff(z):prune()
-		print(dz_eqn_C_9_root_expr)
+		local dz_eqn_6_9_root_expr = eqn_6_9_root_expr_based_on_5_2_b_expr:diff(z):prune()
+		print(dz_eqn_6_9_root_expr)
 		
 		-- assert d/dx rhs == 0, 
 		-- such that if width = width_lhs - width_rhs then d/dz (width) == d/dz (width_lhs)
-		assert(Constant.isValue(eqn_C_9_rhs_over_lambda_expr:diff(z):prune(), 0))
+		assert(Constant.isValue(eqn_6_9_rhs_over_lambda_expr:diff(z):prune(), 0))
 		
 		-- eqn C.4
 		-- using the substitution of eqn C5 to replace R0 with lambda
@@ -466,42 +528,15 @@ timer("deriving root-finding", function()
 
 		normphi_for_r_z_eqn_5_2_a = symmath.export.Lua:toFunc{output={normphi_eqn_5_2_a_expr:rhs()}, input=argvars}
 
-		eqn_C_9_rhs_over_lambda = symmath.export.Lua:toFunc{output={eqn_C_9_rhs_over_lambda_expr}, input=argvars}
-		eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={eqn_C_9_root_expr_based_onn_5_2_b_expr}, input=argvars}
-		dz_eqn_C_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_C_9_root_expr}, input=argvars}
+		eqn_6_9_rhs_over_lambda = symmath.export.Lua:toFunc{output={eqn_6_9_rhs_over_lambda_expr}, input=argvars}
+		eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={eqn_6_9_root_expr_based_on_5_2_b_expr}, input=argvars}
+		dz_eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_6_9_root_expr}, input=argvars}
 	
 		dr_beta_for_r_eqn_5_1 = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
 
-		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_eqn_5_3_expr:rhs()}, input={r}}
-		g_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={g_eqn_5_3_expr:rhs()}, input={r}}
+		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
+		g_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={g_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
 	end	
-
-	
-	-- equation C9
-	-- this is solving the nonlinear equation normrho(r,z) = exp(-1/2 l^2) for z, for fixed z
-	galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b = function(r)
---print('for r = '..r)
-		local z = 1
-		-- newton method
-		local maxiter = 100
-		for iter=1,maxiter do
-			local f_val = eqn_C_9_root_expr_based_on_5_2_b(r, z)
-			local df_dz_val = dz_eqn_C_9_root_expr_based_on_5_2_b(r, z)
-			local dz = -f_val / df_dz_val
-			if math.abs(dz) < 1e-7 then break end 
-			z = z + dz
---[[
-			print(
-				'f = '..f_val
-				..' df_dz = '..df_dz_val
-				..' dz = '..dz
-				..' z = '..z
-			)
---]]		
-			if iter == maxiter then return math.nan end
-		end
-		return z
-	end
 end)
 
 local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
@@ -1453,6 +1488,29 @@ and then you look at C.18, and just give up all hope.
 
 -- trying to get this ... can't get it fro 1560 or 3198
 local function makeGalaxyWidthGraphs(figname, name)
+
+	local function f_lhs(r, z)
+		--return normrho_for_r_z_eqn_5_2_b(r, z) 		-- analytical, buggy
+		return normrho_for_r_z_eqn_5_2_b_in_lua(r, z)
+	end
+
+	local function f_rhs(r, z)
+		--return eqn_6_9_rhs_over_lambda(r, delta)
+		return math.exp(-.5*l*l) 
+	end
+
+	-- f = eqn 5.2b - exp(-l^2/2)
+	local function newton_f(z, r) 
+		--return eqn_6_9_root_expr_based_on_5_2_b(r, z)		-- ... buggy or not, idk ???
+		return f_lhs(r, z) - f_rhs(r, z)
+	end
+	
+	-- df/dz = d/dz (eqn 5.2b)
+	local function newton_df_dz(z, r)
+		-- analytical is buggy maybe ???
+		return dz_eqn_6_9_root_expr_based_on_5_2_b(r, z)
+	end
+
 	do
 		local r = 1
 		local deltavec = xvec
@@ -1464,14 +1522,8 @@ local function makeGalaxyWidthGraphs(figname, name)
 			title = 'eqn C.9 f / lambda lhs & rhs for root finding delta based on eqn 5.2b',
 			data = {
 				deltavec,
-				-- lhs
-				deltavec:map(function(delta)
-					return normrho_for_r_z_eqn_5_2_b(r, delta)
-				end),
-				-- rhs
-				deltavec:map(function(delta)
-					return eqn_C_9_rhs_over_lambda(r, delta)
-				end),
+				deltavec:map(function(delta) return f_lhs(r, delta) end),
+				deltavec:map(function(delta) return f_rhs(r, delta) end),
 			},
 			{using='1:2', title='lhs'},
 			{using='1:3', title='rhs'},
@@ -1484,9 +1536,7 @@ local function makeGalaxyWidthGraphs(figname, name)
 			title = 'f for root finding delta based on norm rho of eqn 5.2b',
 			data = {
 				deltavec,
-				deltavec:map(function(delta)
-					return eqn_C_9_root_expr_based_on_5_2_b(r, delta)
-				end),
+				deltavec:map(function(delta) return newton_f(r, delta) end),
 			},
 			{using='1:2', title=''},
 		}
@@ -1498,16 +1548,30 @@ local function makeGalaxyWidthGraphs(figname, name)
 			title = 'df for root finding delta based on norm rho of eqn 5.2b',
 			data = {
 				deltavec,
-				deltavec:map(function(delta)
-					return dz_eqn_C_9_root_expr_based_on_5_2_b(r, delta)
-				end),
+				deltavec:map(function(delta) return newton_df_dz(r, delta) end),
 			},
 			{using='1:2', title=''},
 		}
 	end
 
+	--[[
+	equation C9
+	this is solving the nonlinear equation:
+		normrho(r,z) = exp(-1/2 l^2) for z, for fixed r
+	where 5.2b = C.9 / lambda = normrho(r,z)
+	
+	so that means we need to solve this but replace normrho(r,z) with whatever eqn we want, usu 5.2b
+	--]]
+	local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
+		--[[ I think the function generation is screwing up, esp for df/dz ...
+		return newtonRootFind(newton_f, newton_df_dz, 1, r)
+		--]]
+		-- [[ how do you determine deltamax?
+		return bisectRootFind(newton_f, 0, 20, r) or math.nan
+		--]]
+	end
 	local rvec = xvec * rmax
-	timer('plotting galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b', function()
+	timer('plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b', function()
 		gnuplot{
 			terminal = 'svg size 1024,768 background rgb "white"',
 			output = figname.."_NGC_"..name.."_galactic_width_eqn_C9.svg",
@@ -1515,7 +1579,7 @@ local function makeGalaxyWidthGraphs(figname, name)
 			xlabel = "r (kpc)",
 			ylabel = "δ (kpc)",
 			title = "Galactic width of NGC "..name,
-			data = {rvec, rvec:map(galacticWidth_for_r_eqn_C_9_based_on_eqn_5_2_b)},
+			data = {rvec, rvec:map(galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b)},
 			{using='1:2', title=''},
 		}
 	end)
@@ -2281,8 +2345,7 @@ gnuplot{
 }
 --]]
 
-
--- TODO normalized rotation curve
+makeGalaxyWidthGraphs('Fig_11a', '3115')
 
 -- TODO galactic width
 

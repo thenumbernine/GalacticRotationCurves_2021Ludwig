@@ -31,7 +31,7 @@ CHECK:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
 TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ... so where do they get it from?)
 This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
 
-TODO:	Fig 5a: NGC 1560 galactic width.  Only root finding function, and I can't get the roots to overlap.
+CHECK:	Fig 5a: NGC 1560 galactic width.
 
 TODO:	Fig 5b: NGC 1560 gravitational potential (and d/dr).
 
@@ -53,8 +53,9 @@ TODO:	Fig 7b: NGC 3198 normalized rotation curve
 CHECK:	Fig 7b: NGC 3198 - sampled rotation curve from 1989 Begeman
 
 I also reconstructed the cited 2006 Cooperstock et al paper's rotation curve, however the fitted function looks like it is a different model than the 2021 Ludwig rotation curve graph.
+Probably because I need to solve the Abel equations with NGC 3198's normrho and normph, and normphi is based on the galactic width ...
 
-TODO:	Fig 8a: NGC 3198 galactic width function.
+CHECK:	Fig 8a: NGC 3198 galactic width.
 
 TODO:	Fig 8b:	NGC 3198 gravitational potential and gravitational potential derivative.
 
@@ -73,7 +74,7 @@ TODO	Fig 10a: NGC 3115 normalized mass density matching the samples
 TODO:	Fig 10b: NGC 3115 normalized rotation curve. 
 TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
 
-TODO:	Fig 11a: NGC 3115 galactic width. 
+CHECK:	Fig 11a: NGC 3115 galactic width. 
 
 TODO:	Fig 11b: NGC 3115 gravitational potential. 
 
