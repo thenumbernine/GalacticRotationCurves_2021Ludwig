@@ -1,3 +1,4 @@
+-- complete elliptic integral of the first kind
 -- https://en.wikipedia.org/wiki/Elliptic_integral#Complete_elliptic_integral_of_the_first_kind
 -- "See Carlson (2010, 19.8) for details"
 

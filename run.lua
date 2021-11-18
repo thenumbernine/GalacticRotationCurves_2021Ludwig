@@ -6,11 +6,17 @@ local timer = require 'ext.timer'
 local math = require 'ext.math'
 local gnuplot = require 'gnuplot'
 local matrix = require 'matrix'
-local symmath = require 'symmath'
 
 local J1 = require 'J1'
 local K = require 'K'
-		
+local E = require 'E'
+
+-- integration function api: integrate(f, xL, xR, n)
+local integrate = require 'integrate'
+--integrate.method = 'adaptlob'		-- goes slow with lua128
+integrate.method = 'simpson'	
+
+local symmath = require 'symmath'
 symmath.fixVariableNames = true
 symmath.tostring = symmath.export.SingleLine
 
@@ -283,6 +289,7 @@ end
 -- eqn 8.4a
 -- also eqn 9.1a (which I got to match eqn 9.1b)
 -- does this mean that eqn 8.4b == eqn 9.1b ?
+-- if mu(alpha) is of the form in eqn D.8 then everything cancels down to look like eqn. 8.4b
 local function normrho_for_r_z_eq_0_eqn_8_4_a(r)
 	local alpha = alpha_for_r(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
@@ -297,7 +304,7 @@ local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	--]]
 	-- [[ looks good
 	return 
-		Y_for_r_eqn_8_1(r) 
+		Y_for_r_eqn_8_1(r)
 		* math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
 	--]]
 	-- "where s(r) is the Sérsic profile adjusted to the luminosity:"
@@ -408,6 +415,9 @@ timer("deriving root-finding", function()
 		-- eqn 5.2.b
 		-- normalized density
 		-- also eqn C.4 but with lambda's definition of C.5 substituted
+		-- for root finding:
+		-- also equation C.9
+		-- also equation C.14
 		local normrho_eqn_5_2_b_expr = normrho:eq(
 			(b*b / (3 * lambda)) * (
 				a*r*r 
@@ -576,20 +586,13 @@ local function makeGalaxyWidthGraphs(figname, name)
 	end)
 end
 
--- integration format: integrate(f, xL, xR, n)
-local integrateRectangular = require 'integraterectangular'
-local integrateTrapezoid = require 'integratetrapezoid'
-local integrateSimpson = require 'integratesimpson'
-local integrateSimpson3_8 = require 'integratesimpson2'
-
-local integrate = integrateRectangular
---local integrate = integrateSimpson 
+	
+-- this is the boundary epsilon, not the integral error tolerance epsilon
+local boundaryEpsilon = 1e-7
 
 -- eqn C.17
 -- normphi(r,0) is based on normrho(r,0)
 local function normphi_for_r_z_eq_0_eqn_C_17(r)
-	local epsilon = 1e-7
-	
 	-- normrho:
 	-- NGC 3198 uses eqn 8.4a
 	-- NGC 3115 shows 8.4a == 8.4b == 9.1b
@@ -608,7 +611,7 @@ local function normphi_for_r_z_eq_0_eqn_C_17(r)
 					* tmp^(3/2)
 					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
 					* normrho_z_eq_0(tmp * r)
-			end, epsilon, 1 - epsilon)
+			end, boundaryEpsilon, 1 - boundaryEpsilon)
 		- math.sqrt(2 / math.pi) * 2/3 * lambda * rs * r
 			* integrate(function(m)
 				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
@@ -617,11 +620,38 @@ local function normphi_for_r_z_eq_0_eqn_C_17(r)
 					* tmp^(3/2)
 					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
 					* normrho_z_eq_0(tmp * r)
-			end, mmin, 1 - epsilon)
-	print(r, mmin, normphi)
+			end, mmin, 1 - boundaryEpsilon)
+print(r, mmin, normphi)
 	return normphi
 end
 
+-- eqn C.18
+local function dr_normphi_for_r_z_eq_0_eqn_C_18(r)
+	local dr_normphi = 1 / math.sqrt(2 * math.pi) * (3/2 * lambda * rs) * 
+			integrate(function(m)
+				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
+				return
+					tmp * tmp
+					* delta(tmp * r)
+					* rho(tmp * r)
+					* (
+						K(m) / (2 * math.sqrt(1 - m) * (1 - math.sqrt(1 - m)))
+						- E(m) / (2 * math.sqrt(1 - m) * (1 - m - math.sqrt(1 - m)))
+					)
+			end, boundaryEpsilon, 1 - boundaryEpsilon)
+		+ 1 / math.srqt(2 * math.pi) * (3/2 * lambda * rs) *
+			integrate(function(m)
+				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
+				return
+					tmp * tmp
+					* delta(tmp * r)
+					* rho(tmp * r)
+					* (
+						K(m) / (2 * math.sqrt(1 - m) * (1 + math.sqrt(1 - m)))
+						- E(m) / (2 * math.sqrt(1 - m) * (1 - m + math.sqrt(1 - m)))
+					)
+			end, mmin, 1 - boundaryEpsilon)
+end
 
 
 --[[
@@ -1372,7 +1402,7 @@ alphamax = alpha_for_r(rmax)
 local rvec = xvec * rmax
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__5b_NGC_1560_Gravitational_potential.svg",
+	output = "Fig__5b_NGC_1560_gravitational_potential.svg",
 	style = 'data lines',
 	xlabel = "r (kpc)",
 	xrange = {rvec[1], rvec[#rvec]},
