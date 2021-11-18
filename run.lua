@@ -586,40 +586,50 @@ local function makeGalaxyWidthGraphs(figname, name)
 	end)
 end
 
-	
+local function mmin_for_r_eqn_6_7(r)
+	local tmp = r + rmax
+	return 4 * r * rmax / (tmp * tmp)
+end
+
 -- this is the boundary epsilon, not the integral error tolerance epsilon
 local boundaryEpsilon = 1e-7
+
+local sqrt_pi = math.sqrt(math.pi)
+local sqrt_2 = math.sqrt(2)
+
+error'TODO both of these integral functions can go faster if I use the galacticWidth vector instead of re-evaluating it every time'
 
 -- eqn C.17
 -- normphi(r,0) is based on normrho(r,0)
 local function normphi_for_r_z_eq_0_eqn_C_17(r)
-	-- normrho:
+	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
+
+	-- normrho -- normalized density
 	-- NGC 3198 uses eqn 8.4a
 	-- NGC 3115 shows 8.4a == 8.4b == 9.1b
-	local normrho_z_eq_0 = normrho_for_r_z_eq_0_eqn_8_4_a
+	local normrho = normrho_for_r_z_eq_0_eqn_8_4_a
 
-	-- eqn 6.7 and eqn C.16
-	local mmin = 4 * r * rmax / (r + rmax)^2
-	
+	local mmin = mmin_for_r_eqn_6_7(r)
+
 	-- eqn C.17:
 	local normphi =
-		-math.sqrt(2 / math.pi) * 3/2 * lambda * rs * r * 
+		-sqrt_2 / sqrt_pi * 3/2 * lambda * rs * r * 
 			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
 				return
 					K(m) / (2 * math.sqrt(m * (1 - m)))
 					* tmp^(3/2)
-					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
-					* normrho_z_eq_0(tmp * r)
+					* delta(tmp * r)
+					* normrho(tmp * r)
 			end, boundaryEpsilon, 1 - boundaryEpsilon)
-		- math.sqrt(2 / math.pi) * 2/3 * lambda * rs * r
+		-sqrt_2 / sqrt_pi * 3/2 * lambda * rs * r
 			* integrate(function(m)
 				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
 				return 
 					K(m) / (2 * math.sqrt(m * (1 - m)))
 					* tmp^(3/2)
-					* galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(tmp * r)
-					* normrho_z_eq_0(tmp * r)
+					* delta(tmp * r)
+					* normrho(tmp * r)
 			end, mmin, 1 - boundaryEpsilon)
 print(r, mmin, normphi)
 	return normphi
@@ -627,30 +637,35 @@ end
 
 -- eqn C.18
 local function dr_normphi_for_r_z_eq_0_eqn_C_18(r)
-	local dr_normphi = 1 / math.sqrt(2 * math.pi) * (3/2 * lambda * rs) * 
+	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
+	local normrho = normrho_for_r_z_eq_0_eqn_8_4_a
+	local mmin = mmin_for_r_eqn_6_7(r)
+	local dr_normphi = 1 / (sqrt_2 * sqrt_pi) * (3/2 * lambda * rs) * 
 			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
 				return
 					tmp * tmp
 					* delta(tmp * r)
-					* rho(tmp * r)
+					* normrho(tmp * r)
 					* (
 						K(m) / (2 * math.sqrt(1 - m) * (1 - math.sqrt(1 - m)))
 						- E(m) / (2 * math.sqrt(1 - m) * (1 - m - math.sqrt(1 - m)))
 					)
 			end, boundaryEpsilon, 1 - boundaryEpsilon)
-		+ 1 / math.srqt(2 * math.pi) * (3/2 * lambda * rs) *
+		+ 1 / (sqrt_2 * sqrt_pi) * (3/2 * lambda * rs) *
 			integrate(function(m)
 				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
 				return
 					tmp * tmp
 					* delta(tmp * r)
-					* rho(tmp * r)
+					* normrho(tmp * r)
 					* (
 						K(m) / (2 * math.sqrt(1 - m) * (1 + math.sqrt(1 - m)))
 						- E(m) / (2 * math.sqrt(1 - m) * (1 - m + math.sqrt(1 - m)))
 					)
 			end, mmin, 1 - boundaryEpsilon)
+print(r, mmin, dr_normphi)
+	return dr_normphi
 end
 
 
@@ -740,6 +755,7 @@ local function normrho_for_r_z_eq_0_eqn_D_12_b(r)
 	end
 	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
 end
+
 
 
 
@@ -2039,11 +2055,10 @@ gnuplot{
 	data = {
 		rvec,
 		rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
-		--rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a),	-- FAIL
-		--dr_normphi_vec 	-- FAIL
+		rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
 	},
 	{using='1:2', title='normphi'},
-	--{using='1:3', title='d/dr normphi'},
+	{using='1:3', title='d/dr normphi'},
 }
 -- CLOSE
 -- if I could match phi(r), then I bet I could match d/dr phi(r)
@@ -2366,8 +2381,10 @@ gnuplot{
 	data = {
 		rvec,
 		rvec:map(normphi_for_r_z_eq_0_eqn_C_17),
+		rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),
 	},
-	{using='1:2', title=''},
+	{using='1:2', title='normphi'},
+	{using='1:3', title='d/dr normphi'},
 }
 
 

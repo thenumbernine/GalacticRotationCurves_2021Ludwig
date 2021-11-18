@@ -61,8 +61,8 @@ Probably because I need to solve the Abel equations with NGC 3198's normrho and 
 
 CHECK:	Fig 8a: NGC 3198 galactic width.
 
-CLOSE:	Fig 8b:	NGC 3198 gravitational potential 
-TODO:	Fig 8b:	NGC 3198 gravitational potential derivative.
+FIXME:	Fig 8b:	NGC 3198 gravitational potential 
+FIXME:	Fig 8b:	NGC 3198 gravitational potential derivative.
 
 
 ### NGC 3115 ###
@@ -81,8 +81,8 @@ TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
 
 CHECK:	Fig 11a: NGC 3115 galactic width. 
 
-CLOSE:	Fig 11b: NGC 3115 gravitational potential
-TODO:	Fig 11b: NGC 3115 gravitational potential derivative
+FIXME:	Fig 11b: NGC 3115 gravitational potential
+FIXME:	Fig 11b: NGC 3115 gravitational potential derivative
 
 TODO:	Fig 12a: NGC 3115 normalized mass density with modified schwarzschild radius. 
 TODO:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.
