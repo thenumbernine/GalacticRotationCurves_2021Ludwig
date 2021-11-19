@@ -20,6 +20,11 @@ local symmath = require 'symmath'
 symmath.fixVariableNames = true
 symmath.tostring = symmath.export.SingleLine
 
+
+-- goes slow, don't do this unless you need to
+local calcGravPotGraphs = false
+
+
 local Gstorage = {}
 setmetatable(_G, {
 	__newindex = function(...)
@@ -597,7 +602,7 @@ local boundaryEpsilon = 1e-7
 local sqrt_pi = math.sqrt(math.pi)
 local sqrt_2 = math.sqrt(2)
 
-error'TODO both of these integral functions can go faster if I use the galacticWidth vector instead of re-evaluating it every time'
+--TODO both of these integral functions can go faster if I use the galacticWidth vector instead of re-evaluating it every time
 
 -- eqn C.17
 -- normphi(r,0) is based on normrho(r,0)
@@ -613,7 +618,7 @@ local function normphi_for_r_z_eq_0_eqn_C_17(r)
 
 	-- eqn C.17:
 	local normphi =
-		-sqrt_2 / sqrt_pi * 3/2 * lambda * rs * r * 
+		-(sqrt_2 / sqrt_pi) * (3/2) * lambda * rs * r * 
 			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
 				return
@@ -622,7 +627,7 @@ local function normphi_for_r_z_eq_0_eqn_C_17(r)
 					* delta(tmp * r)
 					* normrho(tmp * r)
 			end, boundaryEpsilon, 1 - boundaryEpsilon)
-		-sqrt_2 / sqrt_pi * 3/2 * lambda * rs * r
+		-(sqrt_2 / sqrt_pi) * (3/2) * lambda * rs * r
 			* integrate(function(m)
 				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
 				return 
@@ -694,8 +699,8 @@ local function makeRotationCurve(f, g)
 	local beta = beta_at_lbeta
 	local dr = lbeta / 1000			-- make 1000 points
 	local rAndBetaVec = table()
-print('dr', dr)
-print('r', r, 'beta', beta)
+--print('dr', dr)
+--print('r', r, 'beta', beta)
 
 	rAndBetaVec:insert{r, beta}
 
@@ -703,7 +708,7 @@ print('r', r, 'beta', beta)
 		local dbeta_dr = dr_beta_for_r_eqn_5_1(r, beta, f(r), g(r))
 		beta = beta + dbeta_dr * -dr
 		r = r + -dr
-print('r', r, 'beta', beta, 'dbeta_dr', dbeta_dr)
+--print('r', r, 'beta', beta, 'dbeta_dr', dbeta_dr)
 		rAndBetaVec:insert{r, beta}
 	end
 	
@@ -756,7 +761,32 @@ local function normrho_for_r_z_eq_0_eqn_D_12_b(r)
 	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
 end
 
-
+-- eqn C.15
+-- how to calculate rmax
+-- only used for validation right now
+local function rmax_eqn_C_15()
+	-- calculate rmax based on a, b, l, lambda (which itself is based a, b, l)
+	return assert(bisectRootFind(
+		function(r)	-- f
+			-- TODO doesn't seem to intersect ever
+			--[[
+			local rsq = r * r
+			local a_plus_b = a + b
+			local sq_a_plus_b = a_plus_b * a_plus_b 
+			-- lhs of C.15 is C.14 but with delta=0 i.e. z=0
+			return a * rsq + (a + 3 * b) * sq_a_plus_b 
+				/ (lambda * 3 * b * (rsq + sq_a_plus_b)^(5/2))
+			- math.exp(-.5 * l * l)
+			--]]
+			-- [[ hmm, this works ....
+			return galacticWidth_newton_f_root_based_on_eqn_5_2_b(0, r)
+			--]]
+		end,
+		1,			-- xL
+		100,		-- xR
+		nil			-- maxiter
+	))
+end
 
 
 print[[
@@ -1413,6 +1443,9 @@ alphamax = alpha_for_r(rmax)
 -- instead it turns out the alpha (arcsec) associated with the distance of lrho = 5.13 kpc , 
 -- which is the furthest distance specified in the figure 3 subtext.
 
+rmax_check = rmax_eqn_C_15()	-- rmax_check = 12.2202643935 vs 12.2 ... close
+
+
 --[[
 --]]
 local rvec = xvec * rmax
@@ -1690,7 +1723,6 @@ b = 2.64			-- kpc - minor radius bulge
 l = 3.0				-- range parameter
 lambda = 0.00323	-- coefficient
 
-rmax = 30.7			-- kpc - maximum radius
 M = 1.25e+11 * Msun	-- kg - total mass of galaxy
 rho0 = 6.54e-21		-- kg/m^3 - central density
 Upsilon = 6.50 * UpsilonSun	-- kg/W ? ... total mass-to-light ratio
@@ -1703,6 +1735,7 @@ alphamax = alpha_for_r(rmax)
 -- "The profiles extend to the last measurement taken at lrho = 14.1 kpc"
 lrho = 14.1	-- kpc
 alphae_check = alpha_for_r(lrho)
+
 -- alphae_check = 316.12323566131	-- tada - there's where the alpha rhs range of the graph comes from.  which is also alphae.  fuckin paper.
 local alphavec = xvec * alphae
 
@@ -1717,6 +1750,7 @@ lrho_check = r_for_alpha(alphae)	-- lrho_check = 14.130185624146 vs 14.1 ... clo
 
 rs_check = rs_eqn_4_9_a()			-- rs_check = 1.1966867034874e-05 vs 1.20e-5 ... check 
 lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.0032370645736991 vs 0.00323 ... check
+rmax_check = rmax_eqn_C_15()		-- rmax_check = 30.72128372004 vs 30.7 ... close
 
 
 -- column 1 is in arcsec, 
@@ -2045,25 +2079,25 @@ local dr_normphi_vec = rvec:map(function(r)
 	return math.sqrt(g_for_r_eqn_5_3(r)) / r
 end)
 
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__8b_NGC_3198_gravitational_potential_eqn_C7.svg",
-	style = 'data lines',
-	xlabel = "r (kpc)",
-	format = {y = '%.2e'},
-	title = 'Gravitational potential of NGC 3198',
-	data = {
-		rvec,
-		rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
-		rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
-	},
-	{using='1:2', title='normphi'},
-	{using='1:3', title='d/dr normphi'},
-}
--- CLOSE
--- if I could match phi(r), then I bet I could match d/dr phi(r)
--- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
-
+if calcGravPotGraphs then	-- because it's so slow
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__8b_NGC_3198_gravitational_potential_eqn_C7.svg",
+		style = 'data lines',
+		xlabel = "r (kpc)",
+		format = {y = '%.2e'},
+		title = 'Gravitational potential of NGC 3198',
+		data = {
+			rvec,
+			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
+			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
+		},
+		{using='1:2', title='normphi'},
+		{using='1:3', title='d/dr normphi'},
+	}
+	-- if I could match phi(r), then I bet I could match d/dr phi(r)
+	-- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
+end
 
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
 print[[
@@ -2132,7 +2166,6 @@ a = 5.83		-- kpc
 b = 0.282		-- kpc
 l = 4.3
 lambda = 0.432
-rmax = 54.5		-- kpc
 
 M = 7.28e+10 * Msun	-- kg
 rho0 = 5.09e-19		-- kg / m^3
@@ -2158,7 +2191,7 @@ d2 = d2_check
 -- why is lrho the name of the dist of alphae, when r0 is the dist of alpha0 and reff is the dist of alphaeff?
 -- why not call it 're' instead of 'lrho' ?
 lrho_check = r_for_alpha(alphae)		-- lrho_check = 47.679001468717 vs 47.7 ... close
-
+rmax_check = rmax_eqn_C_15()			-- rmax_check = 54.555763851156 vs 54.5 ... close
 
 -- 1st col is alpha^(1/4), in arcseconds, so ^4 it to get the arcseconds
 -- 2nd col is the final processing major (axis?) luminosity in mag/arcsec^2 ... this is the one that the 2021 Ludwig paper uses
@@ -2369,24 +2402,24 @@ gnuplot{
 
 makeGalaxyWidthGraphs('Fig_11a', '3115')
 
--- TODO gravitational potential
 local rvec = xvec * rmax
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_11b_NGC_3115_gravitational_potential_eqn_C7.svg",
-	style = 'data lines',
-	xlabel = "r (kpc)",
-	format = {y = '%.2e'},
-	title = 'Gravitational potential of NGC 3115',
-	data = {
-		rvec,
-		rvec:map(normphi_for_r_z_eq_0_eqn_C_17),
-		rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),
-	},
-	{using='1:2', title='normphi'},
-	{using='1:3', title='d/dr normphi'},
-}
-
+if calcGravPotGraphs then	-- because it's so slow
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig_11b_NGC_3115_gravitational_potential_eqn_C7.svg",
+		style = 'data lines',
+		xlabel = "r (kpc)",
+		format = {y = '%.2e'},
+		title = 'Gravitational potential of NGC 3115',
+		data = {
+			rvec,
+			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),
+			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),
+		},
+		{using='1:2', title='normphi'},
+		{using='1:3', title='d/dr normphi'},
+	}
+end
 
 -- TODO normalized mass density with small increase in rs
 

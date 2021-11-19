@@ -12,7 +12,7 @@ local function completeEllipticIntegralSecondKind(k)
 	local a0 = 1
 	local g0 = math.sqrt(1 - ksq)
 	local cn = math.abs(k)
-	local ainf = agm(a0, g0, nil, nil, function(an,gn,i)
+	local ainf = agm(a0, g0, function(an,gn,i)
 		local cnsq = cn * cn
 		sum = sum + _2n_minus_1 * cnsq 
 		_2n_minus_1 = _2n_minus_1 * 2

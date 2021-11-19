@@ -15,7 +15,7 @@ gnuplot{
 	persist = true,
 	style = 'data lines',
 	data = {x, x:map(K)},
-	{using='1:2'},
+	{using='1:2', title='K'},
 }
 
 -- verify E works
@@ -23,5 +23,5 @@ gnuplot{
 	persist = true,
 	style = 'data lines',
 	data = {x, x:map(E)},
-	{using='1:2'},
+	{using='1:2', title='E'},
 }
