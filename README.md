@@ -27,7 +27,7 @@ CHECK:	Fig 3a: NGC 1560 luminosity profile, adjusted (using the Appendix D varia
 CHECK:	Fig 3a: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 (The Section 7 description of the Luminosity profile doesn't seem to match the Section 7 graph... is it fig 2b maybe?)
 
-FIXME:	Fig 3b: NGC 1560 Sersic index ... I bet my code or the paper has a typo somewhere ... 
+CHECK:	Fig 3b: NGC 1560 Sersic index ... I bet my code or the paper has a typo somewhere ... 
 
 FIXME:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b). ... too far over
 CHECK:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
@@ -77,16 +77,16 @@ CHECK:	Fig 10a: NGC 3115 normalized mass density corrected for high mass-to-ligh
 CHECK:	Fig 10a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.  1987 Capaccioli et al doesn't have these values.  How were they computed for 2021 Ludwig?
 TODO	Fig 10a: NGC 3115 normalized mass density matching the samples 
 
-TODO:	Fig 10b: NGC 3115 normalized rotation curve. 
-TODO:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
+FIXME:	Fig 10b: NGC 3115 normalized rotation curve. 
+CHECK:	Fig 10b: NGC 3115 - sampled rotation curve from 1980 Rubin.
 
 CHECK:	Fig 11a: NGC 3115 galactic width. 
 
 FIXME:	Fig 11b: NGC 3115 gravitational potential
 FIXME:	Fig 11b: NGC 3115 gravitational potential derivative
 
-TODO:	Fig 12a: NGC 3115 normalized mass density with modified schwarzschild radius. 
-TODO:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.
+FIXME:	Fig 12a: NGC 3115 normalized mass density with modified schwarzschild radius. 
+CHECK:	Fig 12a: NGC 3115 - sampled normalized mass density from 1987 Capaccioli et al.
 
-TODO:	Fig 12b: NGC 3115 normalized rotation curve with modified schwarzschild radius. 
-TODO:	Fig 12b: NGC 3115 - sampled rotation curve from 1980 Rubin.
+FIXME:	Fig 12b: NGC 3115 normalized rotation curve with modified schwarzschild radius. 
+CHECK:	Fig 12b: NGC 3115 - sampled rotation curve from 1980 Rubin.

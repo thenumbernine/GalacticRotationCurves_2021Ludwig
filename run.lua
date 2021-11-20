@@ -776,6 +776,34 @@ local function g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18(r)
 	return g_eqn_4_12_b(r, dr_normphi)
 end
 
+-- eqn 3.17:
+-- v^2 ~ R dphi/dR
+-- eqn 4.14:
+-- beta^2 = r d/dr normphi(r,z=0) = g(r)
+-- (using the 5.2a definition of normphi(r,z))
+local function betacirc_for_r_eqn_4_14(r)
+	return math.sqrt(g_for_r_eqn_5_3(r))
+end
+
+-- not used.  looks bad when used for plotting Fig 3.b
+local function S_eqn_D_19(alpha) 
+	return math.log(alpha / alphaeff) 
+		/ math.log(2 / 5 * math.log(10) * (mu_for_alpha_eqn_D_11(alpha) - mu0))	
+end
+
+
+--[[ 
+text after eqn 4.5: 
+beta = v(R,0) / c
+R0 = 1 kpc
+r = R / R0
+z = Z / R0
+normrho = rho / rho0
+rho0 = rho(r=0,z=0)
+normphi = phi / c^2
+--]]
+
+
 
 
 print[[
@@ -784,21 +812,6 @@ print[[
 NGC 1560
 
 ]]
-
-
--- section 6, on spheroid fitting to NGC 1560 and then on solving the Abel equation for beta (= v/c?)
-a = .373					-- kpc
-b = .300					-- kpc
-rs = 0.00000701				-- kpc
-lbeta = 8.29				-- kpc ... this is the starting point of integration according to the text after eqn 5.3
-v_at_lbeta = 80				-- km/s
-beta_at_lbeta = 0.000267	-- unitless <-> v / c
-M = 7.3e+10 * Msun			-- kg
-
--- section 7 but they are normalized anyways so it shouldn't matter right? 
-lambda = 0.134
--- used for section 6 graphs but defined in Appendix D:
-d = 3.0 * 1000 -- kpc
 
 -- col 1 = dist from galaxy center, in arcseconds
 -- col 2 = mu_B = luminosity
@@ -956,9 +969,6 @@ local _1992_Broeils_table_3 = table{
 	{349,	25.91},
 	{353,	26.13},
 }
-local alpha_in_arcsec_1992_Broeils_table_3, luminosity_1992_Broeils = matrix(_1992_Broeils_table_3):T():unpack()
-local r_in_kpc_1992_Broeils_table_3 = alpha_in_arcsec_1992_Broeils_table_3:map(r_for_alpha)
-
 
 -- 1992 Broeis, table 4
 -- col 1 is distance from galaxy center, in arcseconds
@@ -1001,18 +1011,28 @@ local _1992_Broeils_table_4 = table{
 	{540, 75.2, 77.5},
 	{570, 76.6, 78.7},
 }
+
+
+-- section 6, on spheroid fitting to NGC 1560 and then on solving the Abel equation for beta (= v/c?)
+a = .373					-- kpc
+b = .300					-- kpc
+rs = 0.00000701				-- kpc
+lbeta = 8.29				-- kpc ... this is the starting point of integration according to the text after eqn 5.3
+v_at_lbeta = 80				-- km/s
+beta_at_lbeta = 0.000267	-- unitless <-> v / c
+M = 7.3e+10 * Msun			-- kg
+
+-- section 7:
+lambda = 0.134
+
+-- defined in Appendix D text after eqn D.11 ... but used for NGC 1560 graphs in section 6 graphs ... smh 
+d = 3.0 * 1000 -- kpc
+
+
 local alpha_in_arcsec_1992_Broeils_table_4, v_in_km_per_s_1992_Broeils, v_corr_in_km_per_s_1992_Broeils = matrix(_1992_Broeils_table_4):T():unpack()
--- convert distance from arcseconds to kpc
 local r_in_kpc_1992_Broeils_table_4 = alpha_in_arcsec_1992_Broeils_table_4:map(r_for_alpha)
--- convert from km/s to beta = v/c
-local beta_1992_Broeils = v_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s
 local beta_corr_1992_Broeils = v_corr_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s
 
--- now try plotting it ...
--- should be figure 1 lhs, figure 2 lhs, or figure 4 rhs ... yeah they all have the same label
--- CHECK
--- this is figure 1 lhs
--- looks like the paper's samples for Broeils 1992 use the corrected velocities
 local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1033,14 +1053,8 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
+-- CHECK
 
--- eqn 3.17:
--- v^2 ~ R dphi/dR
--- eqn 4.14:
--- beta^2 = r d/dr normphi(r,z=0) = g(r)
-local function betacirc_for_r_eqn_4_14(r)
-	return math.sqrt(g_for_r_eqn_5_3(r))
-end
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__2a_NGC_1560_rotation_velocity_of_spheriod_eqn_4.14.svg",
@@ -1056,39 +1070,18 @@ gnuplot{
 		betavec,
 		r_in_kpc_1992_Broeils_table_4, 
 		beta_corr_1992_Broeils
-		--beta_1992_Broeils, 
+		--v_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s,
 	},
 	{using='1:2', title='2021 Ludwig, β-circular'},
 	{using='1:3', title='2021 Ludwig, β'},
 	{using='4:5', title='1992 Broeils, β-corrected', with='points pointtype 7'},	-- is in the 2021 Ludwig paper
-	--{using='4:6', title='beta 1992 Broeils', with='points pointtype 7'},			-- *NOT* in 2021 Ludwig paper
+	--{using='4:6', title='beta 1992 Broeils', with='points pointtype 7'},			-- not in the 2021 Ludwig paper
 }
 -- CHECK
 
-
--- the rho graph looks a bit close to the r=0 axis
--- but if I try this with the *other* set of a=, b=, lambda= for NGC 1560 then it doesn't fit in the range at all.
 local rvec = xvec * lbeta
-
-local phivec = rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
-local normphivec = phivec / math.abs(phivec[1])
-
--- [[ looks too tight against the r=0 line
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
---]]
---[[ can't do any of these, because it needs Y(r)'s order "YOrder" defined.
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_a)
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b)
---]]
---[[ can't do this because we're missing alpha0
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a)
---]]
---[[ can't do this because we're missing r0
-local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b)
---]]
-local normrhovec = rhovec / math.abs(rhovec[1])
-
+local normphivec = rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a) / math.abs(normphi_for_r_z_eq_0_eqn_5_2_a(rvec[1]))
+local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b) / math.abs(normrho_for_r_z_eq_0_eqn_5_2_b(rvec[1]))
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__1b_NGC_1560_mass_density_and_potential_eqn_5.2.svg",
@@ -1098,66 +1091,48 @@ gnuplot{
 	yrange = {-1, 1},
 	title = 'Mass density and potential',
 	data = {rvec, normphivec, normrhovec},
-	{using='1:2', title='ϕ / |ϕ_0|'},		-- CHECK
-	{using='1:3', title='ρ / |ρ_0|'},		-- FAIL - seems to fall off too sharp
-	{'0', title='', lc='rgb "grey"'},	-- zero line
+	{using='1:2', title='ϕ / |ϕ_0|'},
+	{using='1:3', title='ρ / |ρ_0|'},
+	{'0', title='', lc='rgb "grey"'},
 }
 -- CHECK for phi
 -- CHECK for rho
 
-
---[[ 
-text after eqn 4.5: 
-beta = v(R,0) / c
-R0 = 1 kpc
-r = R / R0
-z = Z / R0
-normrho = rho / rho0
-rho0 = rho(r=0,z=0)
-normphi = phi / c^2
-
-text from section 7:
-"Using the variable Sérsic index profile, 
-the calculated value of the absolute magnitude is Ms = −15.3,
-the total luminosity is Ls = 1.02 × 108 Lsun
-and the apparent magnitude is md = 12.1.
-The total luminosity is calculated up to the maximum galactic radius rmax = 12.2 kpc 
-that is estimated by the rotation velocity model described in the next paragraph."
-
+--[[
 from Appendix D, after eqn D11
 "As an example, the surface brightness μ B of the dwarf galaxy NGC 1560 analyzed in Sect. 7 can be adjusted to the observed values listed by Broeils [32] by taking..."
 so I guess that means these values *aren't* supposed to match figures 3 and 4 in Section 7 ...
 but then why do they match? and why do Section 7's numbers not match?
-
 --]]
+
+-- Appendix D, after eqn D.11:
 mu0 = 22.28
 alpha0 = 61.46	-- arcsec
 s1 = 0.435
 alpha1 = 99.05	-- arcsec
 s2 = 1.144
--- r = d * (math.pi / (180. * 3600.)) * alpha
 Ms = -16.5
 Ls = 3.06e+8 * Lsun	-- W
 d = 3.0 * 1000 -- kpc
 md = 10.9
--- after eqn D12:
-r0 = d * (math.pi / (180 * 3600)) * alpha0	-- r0 = 0.00089389946522976 ... 
-r1 = d * (math.pi / (180 * 3600)) * alpha1	-- r1 = 0.001440623853417 ... 
--- r0 seems different from section 7 r0
--- but idk where these are used
-
+-- Appendix D, after eqn D12:
+r0 = r_for_alpha(alpha0)	-- r0 = 0.89389946522976
+r1 = r_for_alpha(alpha1)	-- r1 = 1.440623853417
+-- the Appendix D r0 is different from Section 7 r0 ... but so is the Appendix D vs Section 7 alpha0, so that makes sense.
 
 -- Figure 3 subtext:
--- "The profiles extend tot he last measurement taken at lrho = 5.13 kpc"
+-- "The profiles extend to the last measurement taken at lrho = 5.13 kpc"
 lrho = 5.13	-- kpc
-alphae_check = alpha_for_r(lrho)
--- alphae_check = 352.71281868253 ... where the fig 3 xrange comes from
+alphae_check = alpha_for_r(lrho)	-- alphae_check = 352.71281868253 ... where the fig 3 xrange comes from
 alphae = alphae_check
 
-local alphavec = xvec * alphae
+local alpha_in_arcsec_1992_Broeils_table_3, luminosity_1992_Broeils = matrix(_1992_Broeils_table_3):T():unpack()
+local r_in_kpc_1992_Broeils_table_3 = alpha_in_arcsec_1992_Broeils_table_3:map(r_for_alpha)
 
 -- CHECK
 -- looks like figure 3 lhs
+-- NOTICE this uses the alphae from Section 7, even though it uses the coefficients from Appendix D
+local alphavec = xvec * alphae
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__3a_NGC_1560_luminosity_eqn_D11_using_appendix_D_numbers.svg",
@@ -1177,40 +1152,18 @@ gnuplot{
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
 }
 
-
 -- -- section 7 1st paragraph:
 mu0 = 22.27
--- "alphaeff = 116.5 (reff = 1.69 kpc)" -- does this mean that the alphaeff should be derivable from the reff?
--- after D12: r0 = d (pi / (180 * 3600)) * alpha0, and then repeated for r1 and alpha1 ...
+alphaeff = 116.5	-- arcsec
+reff = 1.69 		-- kpc, derived
+alpha0 = 140.3		-- arcsec
+r0 = 2.04 			-- kpc, derived.  different from the Appendix D r0
 
-alphaeff = 116.5
-reff = 1.69 -- kpc
-d_check = d_for_r_alpha(reff, alphaeff)
--- d_check = 2992.1675756017 --  ... what units?
--- if the units of 'd' were 'kpc' then this would set 'd' to ~ 3.0 Mpc, which is what our Appendix D values for NGC 1560 claim
--- soo I think maybe that's a win?
--- though what about our changed alpha0 and r0 values?
+d_check = d_for_r_alpha(reff, alphaeff)		-- d_check = 2992.1675756017 --  kpc ~ 3.0 Mpc ... close to the 'd = 3.0 Mpc' for NGC 1560 in Appendix D (but not in Section 7 anywhere)
+r0_check = r_for_alpha(alpha0)				-- r0_check = 2.04058078379 ... which actually matches
 
--- from Appendix D, text after eqn D8 ...
--- ... is Reff the same as reff?
--- man this paper is a mess
--- "and d is the distance to the galaxy" -- at least I can recover that for NGC 1560 since the paper doesn't list its 'd' anywhere.
---alphaeff_check = (180 * 3600 / math.pi) * bs^-s * Reff / d
--- this equation, matching it with the eqn after D12 def of r for d and alpha ... 
--- ... makes it look like bs^-s Reff == r 
--- ... but what 'r' ?
-
-alpha0 = 140.3	-- but didn't we just define an alpha0? and doesn't it work better?
-r0 = 2.04 		-- kpc ... different from the Appendix D r0
--- should alpha0 be calculated from r0, or should r0 be calculated from alpha0?
-alpha0_check = alpha_for_r(r0)	-- alpha0_check = 140.62721893491, which is close
-r0_check = r_for_alpha(alpha0)		-- r0_check = 2.04058078379 ... which actually matches
--- so since the paper says alpha0 = ... (r0 = ...), 
--- maybe it is saying the parenthesis values should be derivable from the non-parenthesis variables?
-
--- non-parenthesis:
 -- these are 4th order poly coeffs that are lin reg fitted to Sersec index profile
-s0 = 0.360		-- s0 = b0
+s0 = 0.360			-- s0 = b0
 b2 = 0.0000344
 b3 = -1.41e-7
 b4 = -4.05e-10
@@ -1219,26 +1172,42 @@ d4 = 5.73e-11
 bPolyOrder = 4
 dPolyOrder = 4
 
--- parenthesis: (derivable?)
+-- parenthesis: (derivable)
 alphae = 353.0		-- derived from alpha of d and lrho (lrho for NGC 1560)
 se = 0.874			-- derived from alphae using eqn D20
 b1 = 0.00245		-- derived from eqn D18
 d2 = -3.22e-6		-- derived from eqn D18
---[[
-why can't this paper at least provide the d and b coeffs sequentially?
-probably because b1 & d2 are derived using eqn D18
 
-so how are they derived?  seems I'm having trouble verifying them.
-also, where does alphae come from?  
-it seems the text after eqn D14 says "sd(alphae) = se" ... 
-... but both se and alphae area listed as derived values ... 
-... so how do you derive se then?
---]]
+Ms = -15.3
+Ls = 1.02e+8 * Lsun	-- W
+md = 12.1
+rmax = 12.2	-- kpc
 
 lrho_check = r_for_alpha(alphae)		-- lrho_check = 5.13417688295 vs 5.13 ... close
 alphae_check = alpha_for_r(lrho)		-- alphae_check = 352.71281868253 - close enough
 
-alphae = alphae_check
+-- does eqn D20 match up with se's definition in section 7?
+-- eqn D20
+se_check = se_eqn_D_20(mu_for_alpha_eqn_D_11)
+-- using the section 7 alpha0: se_check = 0.49270654394305
+-- using the Appendix D alpha0: se_check = 0.88439918653437 ... which matches section 7
+-- ... WHY DOESN'T THE SECTION 7 ALPHAE MATCH THE SECTION 7 SE?!?!?!?
+
+-- ... annnnd no.  eqn D20's se is half of what section 7's variable listing's se is.  but substutitnig the eqn D20 se makes things worse.
+-- however, if we use the alpha0 from Appendix D, then we get se = 0.88439918653437 which is close to correct. 
+--se = se_check
+-- DON'T DO THIS OR IT SCREWS UP Fig 3.b
+
+-- how about eqn D18 vs b1 and d2 in section 7?
+b1_check = b1_eqn_D_18_a()
+-- b1_check = 0.00091103173224744 ... wrong.  half of the given value.
+--b1 = b1_check
+
+d2_check = d2_eqn_D_18_b()
+-- d2_check = 4.2717212743056e-07 ... wrong. one order off ...
+--d2 = d2_check
+
+
 
 --[[
 ok going over coefficients / polynomials / constraints in Appendix D, eqns D14-D18 ...
@@ -1311,11 +1280,11 @@ gnuplot{
 		rvec,
 		rvec:map(function(r)
 			local alpha = alpha_for_r(r)
-			-- [[ looks too fat
+			--[[ looks too fat
 			-- no dif with section 7's variables
 			return mu_for_alpha_eqn_D_11(alpha)
 			--]]
-			--[[ looks more like fig. 3a ...
+			-- [[ looks more like fig. 3a ...
 			-- look much fatter with section 7's variables
 			return mu_for_alpha_eqn_D_8(alpha)
 			--]]
@@ -1326,34 +1295,6 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'}, 
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
 }
-
-
-
-
--- does eqn D20 match up with se's definition in section 7?
--- eqn D20
-se_check = se_eqn_D_20(mu_for_alpha_eqn_D_11)
--- using the section 7 alpha0: se_check = 0.49270654394305
--- using the Appendix D alpha0: se_check = 0.88439918653437 ... which matches section 7
--- ... WHY DOESN'T THE SECTION 7 ALPHAE MATCH THE SECTION 7 SE?!?!?!?
-
--- ... annnnd no.  eqn D20's se is half of what section 7's variable listing's se is.  but substutitnig the eqn D20 se makes things worse.
--- however, if we use the alpha0 from Appendix D, then we get se = 0.88439918653437 which is close to correct. 
-se = se_check
-
--- how about eqn D18 vs b1 and d2 in section 7?
-b1_check = b1_eqn_D_18_a()
--- b1_check = 0.00091103173224744 ... wrong.  half of the given value.
--- and if we change the denom from 1 / (alphae + alpha0) to 1 / (alphae - alpha0) ... it gets a bit closer ... 
--- b1_check = 0.0021128911777981 ... close
---b1 = b1_check
-
-d2_check = d2_eqn_D_18_b()
--- d2_check = 4.2717212743056e-07
--- ... and this is at least close 
--- one order off ...
-d2 = d2_check
-
 
 -- -- for the sake of the luminosity profile, section 7 still has no mention of s1, s2, or alpha1 ...
 -- -- now the mu0 matches, but if I use this alpha0 then the graphs no longer match.
@@ -1425,7 +1366,7 @@ l = 3
 rs = 1.46e-6	-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
 a = 7.19		-- kpc
 b = 0.567		-- kpc
-rmax = 12.2		-- kpc
+--rmax = 12.2	-- kpc repeated ... I think he repeats each of the 3 galaxies' rmax's def twice
 alphamax = alpha_for_r(rmax)
 -- alphamax = 838.81021207153
 -- hmm, not the NGC 1560 graph alphamax for sure ... which is around 350
@@ -1435,8 +1376,6 @@ alphamax = alpha_for_r(rmax)
 rmax_check = rmax_eqn_C_15()	-- rmax_check = 12.2202643935 vs 12.2 ... close
 
 
---[[
---]]
 local rvec = xvec * rmax
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1458,27 +1397,21 @@ gnuplot{
 -- if I use the old a, b, rs then this has too big of an amplitude
 -- if I use the new a, b, rs then this has too small of an amplitude
 
-
 -- eqn C5: lambda = 4 pi R0^3 rho0 / (3 M)
-R0_in_m_check = (3 * M * lambda / (4 * math.pi * rho0)) ^ (1/3) 	-- m
--- R0_in_m_check = 3.08008569838469e+19
-R0_in_kpc_check = R0_in_m_check / m_in_pc / 1000	-- kpc
--- R0_in_kpc_check = 9.98187794103888e-01 kpc
--- very close to the paper's stated R0 = 1 kpc
+-- checking R0 based on NGC 1560's M, lambda, rho0:
+R0_in_m_check = (3 * M * lambda / (4 * math.pi * rho0)) ^ (1/3) 	-- m	-- R0_in_m_check = 3.08008569838469e+19
+R0_in_kpc_check = R0_in_m_check / m_in_pc / 1000	-- kpc	-- R0_in_kpc_check = 9.98187794103888e-01 kpc vs 1 kpc ... close
+-- looks close compared to the paper's stated R0 = 1 kpc
 
-rs_check = rs_eqn_4_9_a()
--- rs_check = 1.4551710314407e-06 ... close to 1.46e-6
-
-lambda_check = lambda_eqn_4_9_b()
--- lambda_check = 0.13473115517544 ... close to 0.134
+rs_check = rs_eqn_4_9_a()			-- rs_check = 1.4551710314407e-06 vs 1.46e-6 ... close 
+lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.13473115517544 vs 0.134 ... close
 
 -- Appendix D, after eqn D12
 -- for NGC 1560, there is a d = 3 Mpc ... defined only in the Appendix D ...
 -- for NGC 3198, there is a d = 9.2 Mpc
 -- for NGC 3115, there is a d = 10 Mpc
 -- ... so what do we use for NGC 1560?
-r0_check = r_for_alpha(alpha0)
-
+r0_check = r_for_alpha(alpha0)		-- r0_check = 2.04058078379 vs 2.04 ... close
 r1 = r_for_alpha(alpha1)
 
 
@@ -1496,26 +1429,8 @@ gnuplot{
 	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
 	{using='1:2', title=''},
 }
--- FAIL. rhs past alphaeff looks too low
-
-
--- how about using D19
-local function S_eqn_D_19(alpha) 
-	-- eqn D19 ... looks bad
-	return math.log(alpha / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))	
-end
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__3b_NGC_1560_Sersic_index_eqn_D19.svg",
-	xlabel = "α (arcsec)",
-	ylabel = "s",
-	style = 'data lines',
-	title = 'Sersic index of NGC 1560',
-	xrange = {0, alphae},
-	data = {alphavec, alphavec:map(S_eqn_D_19)},
-	{using='1:2', title=''},
-}
--- FAIL.  completely wrong.
+-- CHECK 
+-- has a bump at alphaeff that can be fixed by re-deriving the b1, d1, d2 coeffs, just like NGC 3198
 
 
 
@@ -1575,8 +1490,12 @@ gnuplot{
 --]]
 
 -- [[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
---local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
 local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
+--local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
+--local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_a)
+--local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b)
+--local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a)
+--local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
@@ -1597,8 +1516,7 @@ gnuplot{
 --]]
 
 
--- TODO rotation curve
--- TODO while you're here, also use the sampled rotation curve points: r_in_kpc_1992_Broeils_table_4, beta_1992_Broeils, beta_corr_1992_Broeils = matrix(_1992_Broeils_table_4):T():unpack()
+-- TODO CAN'T DO THIS UNTIL YOU FIX NORMRHO!
 --[[
 Section 7 text beneath Fig 4:
 	
@@ -1611,14 +1529,38 @@ Section 7 text beneath Fig 4:
 
 and then you look at C.18, and just give up all hope. 
 --]]
---local rvec, betavec = makeRotationCurve()
-
---f_for_r_eqn_5_3, g_for_r_eqn_5_3)
+--[[
+do	--if calcGravPotGraphs then
+	local rvec, betavec = makeRotationCurve(
+		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
+		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__4b_NGC_1560_normalized_rotation_curve.svg",
+		xlabel = "r (kpc)",
+		ylabel = "v / c",
+		style = 'data lines',
+		title = 'Normalized rotation curve of NGC 1560',
+		xrange = {0, rmax},
+		data = {
+			rvec,
+			betavec,
+			r_in_kpc_1992_Broeils,
+			beta_corr_1992_Broeils,
+		},
+		{using='1:2', title='2021 Ludwig'},
+		{using='3:4', title='1992 Broeils', with='points pointtype 7'},
+	}
+end
+--]]
 
 
 makeGalaxyWidthGraphs('Fig__5a', '1560')
 
+
 -- TODO gravitational potential
+
+
 
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
 print[[
@@ -1628,6 +1570,78 @@ NGC 3198
 
 ]]
 
+-- column 1 is in arcsec, 
+-- column 2 is major mu in mag/arcsec^2
+-- column 2 is minor mu in mag/arcsec^2
+local _1987_Kent_table_2 = table{
+	{0.00,		19.49,	19.49},
+	{2.95,		19.58,	19.82},
+	{5.91,		19.74,	20.24},
+	{8.86,		19.91,	20.56},
+	{11.82,		20.09,	20.79},
+	{14.77,		20.24,	20.95},
+	{17.72,		20.38,	21.03},
+	{20.68,		20.51,	21.10},
+	{23.63,		20.62,	21.19},
+	{26.59,		20.71,	21.30},
+	{29.54,		20.79,	21.40},
+	{33.15,		20.88,	21.56},
+	{37.05,		20.95,	21.83},
+	{41.31,		21.00,	22.12},
+	{45.99,		21.05,	22.44},
+	{51.12,		21.10,	22.75},
+	{56.77,		21.16,	22.97},
+	{60*1.05,	21.25,	23.18},
+	{60*1.16,	21.35,	23.46},
+	{60*1.29,	21.45,	24.04},
+	{60*1.43,	21.63,	24.58},
+	{60*1.58,	21.89,	24.82},
+	{60*1.75,	22.17,	math.nan},
+	{60*1.94,	22.47,	math.nan},
+	{60*2.14,	22.76,	math.nan},
+	{60*2.37,	22.98,	math.nan},
+	{60*2.62,	23.17,	math.nan},
+	{60*2.90,	23.43,	math.nan},
+	{60*3.20,	24.00,	math.nan},
+	{60*3.54,	24.55,	math.nan},
+	{60*3.91,	24.90,	math.nan},
+	{60*4.32,	25.15,	math.nan},
+	{60*4.78,	25.41,	math.nan},
+	{60*5.28,	25.90,	math.nan},
+}
+
+-- col 1 is in arcminutes
+-- col 2 is velocity in km/s
+local _1989_Begeman_table_2 = table{
+	{0.25,	55},
+	{0.5,	92},
+	{0.75,	110},
+	{1.0,	123},
+	{1.25,	134},
+	{1.5,	142},
+	{1.75,	145},
+	{2.0,	147},
+	{2.25,	148},
+	{2.5,	152},
+	{2.75,	155},
+	{3.0,	156},
+	{3.5,	157},
+	{4.0,	153},
+	{4.5,	153},
+	{5.0,	154},
+	{5.5,	153},
+	{6.0,	150},
+	{6.5,	149},
+	{7.0,	148},
+	{7.5,	146},
+	{8.0,	147},
+	{8.5,	148},
+	{9.0,	148},
+	{9.5,	149},
+	{10.0,	150},
+	{10.5,	150},
+	{11.0,	149},
+}
 
 -- Alright, after enough nonsense and contradictions, and being split between two sections (Section 7 and Appendix D) that have contradicting information, 
 -- lets try starting fresh with Section 8, NGC 3198 ...
@@ -1658,12 +1672,7 @@ bPolyOrder = 8
 dPolyOrder = 8
 
 -- parenthesis (derived)
-
---[[
-how do you derive this? 
-wait ... is this alpha of lrho?
-why don't they call it l_e? or alpha_lp? or anything else to connect the two? gah
---]]
+-- if alphae is the alpha of lrho, why don't they call it l_e? or alpha_rho? or anything else to connect the two? gah
 alphae = 316.8		
 se = 1.49			-- TODO how do you derive this?
 b1 = 0.0499
@@ -1704,8 +1713,6 @@ arctan_kspiral_in_deg = math.deg(math.atan(kspiral))
 -- theta = math.atan(ksprial) = math.rad(5.71)
 
 
-
-
 rs = 1.20e-5		-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
 
 -- used for normrho_for_r_z_eqn_5_2_b
@@ -1743,46 +1750,7 @@ rs_check = rs_eqn_4_9_a()			-- rs_check = 1.1966867034874e-05 vs 1.20e-5 ... che
 lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.0032370645736991 vs 0.00323 ... check
 rmax_check = rmax_eqn_C_15()		-- rmax_check = 30.72128372004 vs 30.7 ... close
 
-
--- column 1 is in arcsec, 
--- column 2 is major mu in mag/arcsec^2
--- column 2 is minor mu in mag/arcsec^2
-local alpha_in_arcsec_1987_Kent_table_2, luminosity_1987_Kent_table_2, mu_minor_1987_Kent_table_2  = matrix{
-	{0.00,		19.49,	19.49},
-	{2.95,		19.58,	19.82},
-	{5.91,		19.74,	20.24},
-	{8.86,		19.91,	20.56},
-	{11.82,		20.09,	20.79},
-	{14.77,		20.24,	20.95},
-	{17.72,		20.38,	21.03},
-	{20.68,		20.51,	21.10},
-	{23.63,		20.62,	21.19},
-	{26.59,		20.71,	21.30},
-	{29.54,		20.79,	21.40},
-	{33.15,		20.88,	21.56},
-	{37.05,		20.95,	21.83},
-	{41.31,		21.00,	22.12},
-	{45.99,		21.05,	22.44},
-	{51.12,		21.10,	22.75},
-	{56.77,		21.16,	22.97},
-	{60*1.05,	21.25,	23.18},
-	{60*1.16,	21.35,	23.46},
-	{60*1.29,	21.45,	24.04},
-	{60*1.43,	21.63,	24.58},
-	{60*1.58,	21.89,	24.82},
-	{60*1.75,	22.17,	math.nan},
-	{60*1.94,	22.47,	math.nan},
-	{60*2.14,	22.76,	math.nan},
-	{60*2.37,	22.98,	math.nan},
-	{60*2.62,	23.17,	math.nan},
-	{60*2.90,	23.43,	math.nan},
-	{60*3.20,	24.00,	math.nan},
-	{60*3.54,	24.55,	math.nan},
-	{60*3.91,	24.90,	math.nan},
-	{60*4.32,	25.15,	math.nan},
-	{60*4.78,	25.41,	math.nan},
-	{60*5.28,	25.90,	math.nan},
-}:T():unpack()
+local alpha_in_arcsec_1987_Kent_table_2, luminosity_1987_Kent_table_2, mu_minor_1987_Kent_table_2  = matrix(_1987_Kent_table_2):T():unpack()
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1805,8 +1773,6 @@ gnuplot{
 -- CHECK.  good.
 -- though there is a hiccup in the sd->sb transition at alpha0
 -- solution? re-derive the parenthesis values like b1
--- BUT the data points are supposed to come from 1987 Kent .... but they don't ...
--- there's no table in 1987 Kent, except for a table of rad, min, max
 
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1820,7 +1786,6 @@ gnuplot{
 	{using='1:2', title=''}, 
 }
 -- CHECK.  good.
--- same as prev graph: fix the hiccup.
 
 local r_in_kpc_1987_Kent_table_2 = alpha_in_arcsec_1987_Kent_table_2:map(r_for_alpha)
 -- [[ this is my go-to for making normrho from lum for sampled data ...
@@ -1866,40 +1831,7 @@ aka alpha=10.752101602242 arcminutes
 So d=9.4 Mpc is bad.
 
 Actually the paper doesn't say it uses d=9.4 Mpc, it says that its table is from a previous paper that uses d=9.4 Mpc.
-
-row #1 is arcminutes
-row #2 is velocity in km/s
 --]]
-local _1989_Begeman_table_2 = table{
-	{0.25,	55},
-	{0.5,	92},
-	{0.75,	110},
-	{1.0,	123},
-	{1.25,	134},
-	{1.5,	142},
-	{1.75,	145},
-	{2.0,	147},
-	{2.25,	148},
-	{2.5,	152},
-	{2.75,	155},
-	{3.0,	156},
-	{3.5,	157},
-	{4.0,	153},
-	{4.5,	153},
-	{5.0,	154},
-	{5.5,	153},
-	{6.0,	150},
-	{6.5,	149},
-	{7.0,	148},
-	{7.5,	146},
-	{8.0,	147},
-	{8.5,	148},
-	{9.0,	148},
-	{9.5,	149},
-	{10.0,	150},
-	{10.5,	150},
-	{11.0,	149},
-}
 local alpha_in_arcmin_1989_Begeman_table_2, v_in_km_per_s_1989_Begeman_table_2 = matrix(_1989_Begeman_table_2):T():unpack()
 -- convert from arcminutes into kpc
 local r_in_kpc_1989_Begeman = (alpha_in_arcmin_1989_Begeman_table_2 * 60):map(r_for_alpha)
@@ -1981,6 +1913,52 @@ end
 
 
 --[[
+hmm, where's the equation for delta(r)?
+-- all I seem to find are equalities using delta(r) ... so then you solve the nonlinear equation?
+-- 6.9, C14 ...
+
+I'm trying to generalize the rotation curve generation too quickly in this function:
+--]]
+makeGalaxyWidthGraphs('Fig__8a', '3198')
+
+
+local rvec = xvec * rmax
+
+--[[ From section 8, bottom of page 186, first column:
+The circular velocity approximation, if applied to the gravitational
+potential shown in Fig. 8, gives a strongly oscillating velocity ...
+
+so I think that means I should use the circular velocity profile,
+from eqn 3.17 and 4.14, which says beta(r) = sqrt(g(r)) = sqrt(r d/dr normphi(r))
+which would mean that d/dr normphi(r) = sqrt(g(r))/r
+... for ... i'm guessing ... g(r) being the circular velocity profile, in eqn 5.3 (as eqn 4.14 and eqn 3.17 use)?
+--]]	
+local dr_normphi_vec = rvec:map(function(r)
+	return math.sqrt(g_for_r_eqn_5_3(r)) / r
+end)
+
+if calcGravPotGraphs then	-- because it's so slow
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__8b_NGC_3198_gravitational_potential_eqn_C7.svg",
+		style = 'data lines',
+		xlabel = "r (kpc)",
+		format = {y = '%.2e'},
+		title = 'Gravitational potential of NGC 3198',
+		data = {
+			rvec,
+			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
+			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
+		},
+		{using='1:2', title='normphi'},
+		{using='1:3', title='d/dr normphi'},
+	}
+	-- if I could match phi(r), then I bet I could match d/dr phi(r)
+	-- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
+end
+
+
+--[[
 going through sources
 2006 Cooperstock et al
 
@@ -2046,50 +2024,6 @@ it looks just like the 2006 Cooperstock et al paper
 but this graph doesnt' look like the 2021 Ludwig paper
 --]]
 
---[[
-hmm, where's the equation for delta(r)?
--- all I seem to find are equalities using delta(r) ... so then you solve the nonlinear equation?
--- 6.9, C14 ...
-
-I'm trying to generalize the rotation curve generation too quickly in this function:
---]]
-makeGalaxyWidthGraphs('Fig__8a', '3198')
-
-
-local rvec = xvec * rmax
-
---[[ From section 8, bottom of page 186, first column:
-The circular velocity approximation, if applied to the gravitational
-potential shown in Fig. 8, gives a strongly oscillating velocity ...
-
-so I think that means I should use the circular velocity profile,
-from eqn 3.17 and 4.14, which says beta(r) = sqrt(g(r)) = sqrt(r d/dr normphi(r))
-which would mean that d/dr normphi(r) = sqrt(g(r))/r
-... for ... i'm guessing ... g(r) being the circular velocity profile, in eqn 5.3 (as eqn 4.14 and eqn 3.17 use)?
---]]	
-local dr_normphi_vec = rvec:map(function(r)
-	return math.sqrt(g_for_r_eqn_5_3(r)) / r
-end)
-
-if calcGravPotGraphs then	-- because it's so slow
-	gnuplot{
-		terminal = 'svg size 1024,768 background rgb "white"',
-		output = "Fig__8b_NGC_3198_gravitational_potential_eqn_C7.svg",
-		style = 'data lines',
-		xlabel = "r (kpc)",
-		format = {y = '%.2e'},
-		title = 'Gravitational potential of NGC 3198',
-		data = {
-			rvec,
-			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
-			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
-		},
-		{using='1:2', title='normphi'},
-		{using='1:3', title='d/dr normphi'},
-	}
-	-- if I could match phi(r), then I bet I could match d/dr phi(r)
-	-- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
-end
 
 
 
@@ -2527,7 +2461,7 @@ gnuplot{
 }
 
 -- normalized rotation curve with small increase in rs
-do	--if calcGravPotGraphs then	
+if calcGravPotGraphs then	
 	local rvec = xvec * lbeta
 	local rvec, betavec = makeRotationCurve(
 		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
