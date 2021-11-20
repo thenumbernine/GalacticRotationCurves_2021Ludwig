@@ -226,11 +226,6 @@ local function d2_eqn_D_18_b()
 	)
 end
 
--- eqn D.20
-local function se_eqn_D_20(mu_for_alpha_fn)
-	return math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_fn(alphae) - mu0))	
-end
-
 -- equation C.2
 -- where A, B, R, Z are normalized somehow
 -- I'm not using this one at the moment
@@ -271,6 +266,13 @@ end
 local function mu_for_alpha_eqn_D_8(alpha)
 	local s = s_for_alpha_eqn_D_13(alpha)
 	return mu0 + 5 / (2 * math.log(10)) * (alpha / alphaeff) ^ (1 / s)
+end
+
+-- eqn D.20
+-- for NGC 1560 using eqn D.11 for mu(alpha) this messes up, but using eqn D.8 it works.
+-- for NGC 3198 and 3115 it works for mu(alpha) with eqn D.8
+local function se_eqn_D_20()
+	return math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_8(alphae) - mu0))	
 end
 
 -- eqn 8.5
@@ -1184,30 +1186,10 @@ md = 12.1
 rmax = 12.2	-- kpc
 
 lrho_check = r_for_alpha(alphae)		-- lrho_check = 5.13417688295 vs 5.13 ... close
-alphae_check = alpha_for_r(lrho)		-- alphae_check = 352.71281868253 - close enough
-
--- does eqn D20 match up with se's definition in section 7?
--- eqn D20
-se_check = se_eqn_D_20(mu_for_alpha_eqn_D_11)
--- using the section 7 alpha0: se_check = 0.49270654394305
--- using the Appendix D alpha0: se_check = 0.88439918653437 ... which matches section 7
--- ... WHY DOESN'T THE SECTION 7 ALPHAE MATCH THE SECTION 7 SE?!?!?!?
-
--- ... annnnd no.  eqn D20's se is half of what section 7's variable listing's se is.  but substutitnig the eqn D20 se makes things worse.
--- however, if we use the alpha0 from Appendix D, then we get se = 0.88439918653437 which is close to correct. 
---se = se_check
--- DON'T DO THIS OR IT SCREWS UP Fig 3.b
-
--- how about eqn D18 vs b1 and d2 in section 7?
-b1_check = b1_eqn_D_18_a()
--- b1_check = 0.00091103173224744 ... wrong.  half of the given value.
---b1 = b1_check
-
-d2_check = d2_eqn_D_18_b()
--- d2_check = 4.2717212743056e-07 ... wrong. one order off ...
---d2 = d2_check
-
-
+alphae_check = alpha_for_r(lrho)		-- alphae_check = 352.71281868253 - close
+se_check = se_eqn_D_20()				-- se_check = 0.874 vs 0.874 - check
+b1_check = b1_eqn_D_18_a()		-- b1_check = 0.0024569204655008 vs 0.00245 ... close
+d2_check = d2_eqn_D_18_b()		-- d2_check = -3.2067929248811e-06 vs -3.22e-6 ... close
 
 --[[
 ok going over coefficients / polynomials / constraints in Appendix D, eqns D14-D18 ...
@@ -1674,7 +1656,7 @@ dPolyOrder = 8
 -- parenthesis (derived)
 -- if alphae is the alpha of lrho, why don't they call it l_e? or alpha_rho? or anything else to connect the two? gah
 alphae = 316.8		
-se = 1.49			-- TODO how do you derive this?
+se = 1.49
 b1 = 0.0499
 d2 = 0.0000181
 
@@ -1702,11 +1684,11 @@ v = 1.4
 -- either way, this corresponds to the number of peaks in the curves, and for NGC 3198 it has 4 peaks
 YOrder = 4
 
-alphaeff_check = alpha_for_r(reff)				-- alphaeff_check = 22.420087635554 vs 22.4 ... check
-reff_check = r_for_alpha(alphaeff)				-- reff_check = 0.99910403403053 vs 1.00 ... check
-alpha0_check = alpha_for_r(r0)					-- alpha0_check = 154.02600205626 vs 154.0 ... check
-r0_check = r_for_alpha(alpha0)					-- r0_check = 6.8688402339599 vs 6.87 ... check
-se_check = se_eqn_D_20(mu_for_alpha_eqn_D_8)	-- se_check = 1.49 vs 1.49 ... check
+alphaeff_check = alpha_for_r(reff)		-- alphaeff_check = 22.420087635554 vs 22.4 ... check
+reff_check = r_for_alpha(alphaeff)		-- reff_check = 0.99910403403053 vs 1.00 ... check
+alpha0_check = alpha_for_r(r0)			-- alpha0_check = 154.02600205626 vs 154.0 ... check
+r0_check = r_for_alpha(alpha0)			-- r0_check = 6.8688402339599 vs 6.87 ... check
+se_check = se_eqn_D_20()				-- se_check = 1.49 vs 1.49 ... check
 
 arctan_kspiral_in_deg = math.deg(math.atan(kspiral))
 -- arctan_kspiral_in_deg = 5.7105931374996
@@ -2240,7 +2222,7 @@ reff_check = r_for_alpha(alphaeff)		-- reff_check = 0.091144972048593 vs 0.0911 
 alpha0_check = alpha_for_r(r0)			-- alpha0_check = 18.233808872243 vs 18.24 ... close
 r0_check = r_for_alpha(alpha0)			-- r0_check = 0.88430015434379 vs 0.884 ... close
 alphae_check = alpha_for_r(lrho)		-- alphae_check = 983.88312579865 vs 983.45 ... close
-se_check = se_eqn_D_20(mu_for_alpha_eqn_D_8)	-- se_check = 2.43 vs 2.43 ... check
+se_check = se_eqn_D_20()				-- se_check = 2.43 vs 2.43 ... check
 b1_check = b1_eqn_D_18_a()				-- b1_check = 0.11562347077137 vs 0.116 ... close
 d2_check = d2_eqn_D_18_b()				-- d2_check = -2.2101537775354e-06 vs -2.21e-6 ... close
 d_check = d_for_r_alpha(reff, alphaeff)	-- d_check = 9995.0658771864 vs 10000 ... close
