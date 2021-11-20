@@ -1,23 +1,28 @@
-local function newtonRootFind(f, df_dx, x0, maxiter, ...)
-	local x = x0
-	maxiter = maxiter or 100
+local math = require 'ext.math'
+
+local epsilon = 1e-7
+local maxiter = 100
+
+local function newtonRootFind(f, df_dx, x, ...)
+	local lastabsdx = math.huge
 	for iter=1,maxiter do
 		local f_val = f(x, ...)
 		local df_dx_val = df_dx(x, ...)
 		local dx = -f_val / df_dx_val
-		if math.abs(dx) < 1e-7 then break end 
+		local absdx = math.abs(dx)
+		if absdx < epsilon and absdx == lastabsdx then return x end 
+		lastabsdx = absdx
 		x = x + dx
 --[[
 		print(
 			'f = '..f_val
-			..' df_dz = '..df_dz_val
-			..' dz = '..dz
-			..' z = '..z
+			..' df_dx = '..df_dx_val
+			..' dx = '..dx
+			..' x = '..x
 		)
 --]]
-		if iter == maxiter then return math.nan end
 	end
-	return x
+	return math.nan
 end
 
 return newtonRootFind

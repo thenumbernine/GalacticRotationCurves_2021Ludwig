@@ -11,6 +11,9 @@ local J1 = require 'J1'
 local K = require 'K'
 local E = require 'E'
 
+local newtonRootFind = require 'newton'
+local bisectRootFind = require 'bisect'
+
 -- integration function api: integrate(f, xL, xR, n)
 local integrate = require 'integrate'
 --integrate.method = 'adaptlob'		-- goes slow with lua128
@@ -362,13 +365,9 @@ local function normrho_for_r_z_eq_0_eqn_9_1_b(r)
 	--]]
 end
 
-local newtonRootFind = require 'newton'
-local bisectRootFind = require 'bisect'
-
 -- expressions ... putting all in one place so the symbolic vars will be too
 local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
 local normphi_for_r_z_eqn_5_2_a 
-local eqn_6_9_root_expr_based_on_5_2_b	-- internal to the newton root-finder
 local dz_eqn_6_9_root_expr_based_on_5_2_b
 local eqn_6_9_rhs_over_lambda		-- purely for debugging
 local dr_beta_for_r_eqn_5_1 		-- dbeta_dr(r, beta, f, g)
@@ -496,34 +495,19 @@ timer("deriving root-finding", function()
 		normphi_for_r_z_eqn_5_2_a = symmath.export.Lua:toFunc{output={normphi_eqn_5_2_a_expr:rhs()}, input=argvars}
 
 		eqn_6_9_rhs_over_lambda = symmath.export.Lua:toFunc{output={eqn_6_9_rhs_over_lambda_expr}, input=argvars}
-		eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={eqn_6_9_root_expr_based_on_5_2_b_expr}, input=argvars}
+		
 		dz_eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_6_9_root_expr}, input=argvars}
 	
 		dr_beta_for_r_eqn_5_1 = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
 
 		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
+		
 		g_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={g_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
 	end	
 end)
 
 local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
 	return normrho_for_r_z_eqn_5_2_b(r,0)
-end
-
--- this looks different than the symmath compiled function ... hmm ...
-local function normrho_for_r_z_eqn_5_2_b_in_lua(r,z)
-	local tmp = math.sqrt(b*b + z*z)
-	return 
-		(b*b / (3 * lambda)) * (
-			a*r*r 
-			+ (a + 3 * tmp) * (a + tmp)^2
-		) / (
-			(r*r + (a + tmp)^2)^(5/2)
-			* tmp^3
-		)
-end
-local function normrho_for_r_z_eq_0_eqn_5_2_b_in_lua(r)
-	return normrho_for_r_z_eqn_5_2_b_in_lua(r,0)
 end
 
 --[[
@@ -536,24 +520,20 @@ local function normphi_for_r_z_eq_0_eqn_5_2_a(r)
 end
 
 local function galacticWidth_newton_f_lhs_based_on_eqn_5_2_b(r, z)
-	--return normrho_for_r_z_eqn_5_2_b(r, z) 		-- analytical, buggy
-	return normrho_for_r_z_eqn_5_2_b_in_lua(r, z)
+	return normrho_for_r_z_eqn_5_2_b(r, z)
 end
 
 local function galacticWidth_newton_f_rhs(r, z)
-	--return eqn_6_9_rhs_over_lambda(r, delta)
-	return math.exp(-.5*l*l) 
+	return eqn_6_9_rhs_over_lambda(r, delta)
 end
 
 -- f = eqn 5.2b - exp(-l^2/2)
 local function galacticWidth_newton_f_root_based_on_eqn_5_2_b(z, r) 
-	--return eqn_6_9_root_expr_based_on_5_2_b(r, z)		-- ... buggy or not, idk ???
 	return galacticWidth_newton_f_lhs_based_on_eqn_5_2_b(r, z) - galacticWidth_newton_f_rhs(r, z)
 end
 	
 -- df/dz = d/dz (eqn 5.2b)
 local function galacticWidth_newton_df_dz_based_on_eqn_5_2_b(z, r)
-	-- analytical is buggy maybe ???
 	return dz_eqn_6_9_root_expr_based_on_5_2_b(r, z)
 end
 
@@ -645,7 +625,8 @@ local function dr_normphi_for_r_z_eq_0_eqn_C_18(r)
 	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
 	local normrho = normrho_for_r_z_eq_0_eqn_8_4_a
 	local mmin = mmin_for_r_eqn_6_7(r)
-	local dr_normphi = 1 / (sqrt_2 * sqrt_pi) * (3/2 * lambda * rs) * 
+	local dr_normphi = 
+		1 / (sqrt_2 * sqrt_pi) * (3/2 * lambda * rs) * 
 			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
 				return
@@ -690,9 +671,6 @@ so this makes the smooth graphs of a spheroid rotation curve.
 how to get the bumpy ones? 
 maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
 yes, sure enough, (down at the Fig__4b graphs) they replace the f(r) and g(r)
-
-NOTICE -
-- this is based on the spheroid functions, not the varying normphi/normrho of 5.2ab
 --]]
 local function makeRotationCurve(f, g)
 	local r = lbeta
@@ -768,25 +746,36 @@ local function rmax_eqn_C_15()
 	-- calculate rmax based on a, b, l, lambda (which itself is based a, b, l)
 	return assert(bisectRootFind(
 		function(r)	-- f
-			-- TODO doesn't seem to intersect ever
-			--[[
-			local rsq = r * r
-			local a_plus_b = a + b
-			local sq_a_plus_b = a_plus_b * a_plus_b 
-			-- lhs of C.15 is C.14 but with delta=0 i.e. z=0
-			return a * rsq + (a + 3 * b) * sq_a_plus_b 
-				/ (lambda * 3 * b * (rsq + sq_a_plus_b)^(5/2))
-			- math.exp(-.5 * l * l)
-			--]]
-			-- [[ hmm, this works ....
 			return galacticWidth_newton_f_root_based_on_eqn_5_2_b(0, r)
-			--]]
 		end,
 		1,			-- xL
 		100,		-- xR
 		nil			-- maxiter
 	))
 end
+
+-- eqn 4.12a
+local function f_eqn_4_12_a(r, normrho)
+	return 3/2 * lambda * rs * r * r * normrho
+end
+
+-- eqn 4.12b
+local function g_eqn_4_12_b(r, dr_normphi)
+	return r * dr_normphi
+end
+
+-- f from eqn 4.12a with normrho from
+local function f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b(r)
+	local normrho = normrho_for_r_z_eq_0_eqn_8_4_b(r)
+	return f_eqn_4_12_a(r, normrho)
+end
+
+-- g from eqn 4.12b with dr_normphi from
+local function g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18(r)
+	local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r)
+	return g_eqn_4_12_b(r, dr_normphi)
+end
+
 
 
 print[[
@@ -1114,7 +1103,7 @@ gnuplot{
 	{'0', title='', lc='rgb "grey"'},	-- zero line
 }
 -- CHECK for phi
--- fail-ish for rho ... looks a bit too close to the r=0 axis 
+-- CHECK for rho
 
 
 --[[ 
@@ -1587,7 +1576,7 @@ gnuplot{
 
 -- [[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
 --local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
-local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b_in_lua)
+local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
@@ -1622,7 +1611,9 @@ Section 7 text beneath Fig 4:
 
 and then you look at C.18, and just give up all hope. 
 --]]
---local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
+--local rvec, betavec = makeRotationCurve()
+
+--f_for_r_eqn_5_3, g_for_r_eqn_5_3)
 
 
 makeGalaxyWidthGraphs('Fig__5a', '1560')
@@ -1959,33 +1950,32 @@ local function g_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4_b(r)
 end
 
 
--- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
--- but ... the value is not provided in this paper.
--- well at least the 1989 Begeman paper looks correct
-local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
--- FAIL NOTICE TODO this will always be wrong until I replace the f & g with the previously defined f & g
--- and for that I need the C.18 def, 
--- and for that I need the galaxy width function
-
---local rvec = xvec * rmax	-- equivalent, since rmax = 30.7, and lbeta = 29.4
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__7b_NGC_3198_normalized_rotation_curve.svg",
-	xlabel = "r (kpc)",
-	ylabel = "v / c",
-	style = 'data lines',
-	title = 'Normalized rotation curve of NGC 3198',	-- why is this called "normalized" rotation curve?
-	xrange = {0, rmax},
-	data = {
-		rvec,
-		betavec,
-		r_in_kpc_1989_Begeman,
-		beta_1989_Begeman,
-	},
-	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1989 Begeman', with='points pointtype 7'},
-}
+if calcGravPotGraphs then
+	-- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
+	-- but ... the value is not provided in this paper.
+	-- well at least the 1989 Begeman paper looks correct
+	local rvec, betavec = makeRotationCurve(f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b, g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	--local rvec = xvec * rmax	-- equivalent, since rmax = 30.7, and lbeta = 29.4
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__7b_NGC_3198_normalized_rotation_curve.svg",
+		xlabel = "r (kpc)",
+		ylabel = "v / c",
+		style = 'data lines',
+		title = 'Normalized rotation curve of NGC 3198',	-- why is this called "normalized" rotation curve?
+		xrange = {0, rmax},
+		data = {
+			rvec,
+			betavec,
+			r_in_kpc_1989_Begeman,
+			beta_1989_Begeman,
+		},
+		{using='1:2', title='2021 Ludwig'},
+		{using='3:4', title='1989 Begeman', with='points pointtype 7'},
+	}
+end
 -- FAIL
+-- this will remain a FAIL until 8.b grav pot and d/dr are fixed
 
 
 --[[
@@ -2421,6 +2411,29 @@ if calcGravPotGraphs then	-- because it's so slow
 	}
 end
 
--- TODO normalized mass density with small increase in rs
+-- fig 12 has adjusted schwarzschild radius
+rs = 7.00e-6
+
+-- normalized mass density with small increase in rs
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_12a_NGC_3115_normalized_mass_density_eqn_8.4a_rs_adj.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ / ρ0",
+	style = 'data lines',
+	title = 'Normalized mass density of NGC 3115 (eqn 8.4a)',
+	log = 'xy',
+	xrange = {rvec[1], rvec[#rvec]},
+	--yrange = {1e-6, 1},
+	format = {y = '%.2e'},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_a),
+		r_in_kpc_1987_Capaccioli_et_al_table_9,
+		normrho_1987_Capaccioli_et_al_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
+}
 
 -- TODO normalized rotation curve with small increase in rs

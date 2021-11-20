@@ -14,7 +14,7 @@ For NGC 1560 there are two sets of functions/parameters, one in section 7 and on
 CHECK:	Fig 1a: NGC 1560 - rotation velocity of a spheroid
 CHECK:	Fig 1a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeils 
 
-FIXME:	Fig 1b: NGC 1560 mass density
+CHECK:	Fig 1b: NGC 1560 mass density
 CHECK:	Fig 1b: NGC 1560 gravitational potential
 
 CHECK:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
@@ -27,7 +27,7 @@ CHECK:	Fig 3a: NGC 1560 luminosity profile, adjusted (using the Appendix D varia
 CHECK:	Fig 3a: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 (The Section 7 description of the Luminosity profile doesn't seem to match the Section 7 graph... is it fig 2b maybe?)
 
-FIXME:	Fig 3b: NGC 1560 Sersic index
+FIXME:	Fig 3b: NGC 1560 Sersic index ... I bet my code or the paper has a typo somewhere ... 
 
 FIXME:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b). ... too far over
 CHECK:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
@@ -37,7 +37,8 @@ This should be reproducable once the norm mass density and grav pot are done -- 
 
 CHECK:	Fig 5a: NGC 1560 galactic width.
 
-TODO:	Fig 5b: NGC 1560 gravitational potential (and d/dr).
+FIXME:	Fig 5b: NGC 1560 gravitational potential 
+TODO:	Fig 5b: NGC 1560 d/dr of gravitational potential
 
 
 ### NGC 3198 ###
