@@ -27,6 +27,9 @@ symmath.tostring = symmath.export.SingleLine
 -- goes slow, don't do this unless you need to
 local calcGravPotGraphs = false
 
+-- also goes slow:
+local calcRotCurveGraphs = true
+
 
 local Gstorage = {}
 setmetatable(_G, {
@@ -296,6 +299,17 @@ local function s_for_r_eqn_8_5(r)
 	--]]
 end
 
+
+-- unlabeled equation?
+-- Same as eqn 8.4a, 8.4b, 9.1b except with Y(r) set to 1
+-- (You can set YOrder = -1 and use these others and it should also work)
+-- This is the same normalized mass density as NGC 3198 and NGC 3115 except with Y(r) set to 1.
+-- (Since there was no Y(r) defined for NGC 1560).
+-- I can't find it anywhere in the paper that this equation is given.
+local function normrho_for_r_NGC_1560(r)
+	return math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
+end
+
 -- eqn 8.4a
 -- also eqn 9.1a (which I got to match eqn 9.1b)
 -- does this mean that eqn 8.4b == eqn 9.1b ?
@@ -305,7 +319,7 @@ local function normrho_for_r_z_eq_0_eqn_8_4_a(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
 end
 
--- eqn 8.4
+-- eqn 8.4b
 -- ... has both these equations ... and they aren't even equal ... smh
 local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	--[[ can't do this without s1 and s1 of the galaxy being defined ... which it is not for NGC 3198
@@ -550,9 +564,12 @@ nah, it looks good enough.
 --]]
 local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
 	--[[ I think the function generation is screwing up, esp for df/dz ...
-	return newtonRootFind(galacticWidth_newton_f_root_based_on_eqn_5_2_b, galacticWidth_newton_df_dz_based_on_eqn_5_2_b, 1, nil, r)
+	return newtonRootFind(
+		galacticWidth_newton_f_root_based_on_eqn_5_2_b,
+		galacticWidth_newton_df_dz_based_on_eqn_5_2_b, 
+		1, r)
 	--]]
-	-- [[ looks good, but how do you determine deltamax?
+	-- [[ looks good, faster than newton, but how do you determine deltamax?
 	return bisectRootFind(galacticWidth_newton_f_root_based_on_eqn_5_2_b, 0, 20, nil, r) or math.nan
 	--]]
 end
@@ -677,7 +694,8 @@ yes, sure enough, (down at the Fig__4b graphs) they replace the f(r) and g(r)
 local function makeRotationCurve(f, g)
 	local r = lbeta
 	local beta = beta_at_lbeta
-	local dr = lbeta / 1000			-- make 1000 points
+	local n = 1000			-- make 1000 points
+	local dr = lbeta / n
 	local rAndBetaVec = table()
 --print('dr', dr)
 --print('r', r, 'beta', beta)
@@ -1035,53 +1053,56 @@ local alpha_in_arcsec_1992_Broeils_table_4, v_in_km_per_s_1992_Broeils, v_corr_i
 local r_in_kpc_1992_Broeils_table_4 = alpha_in_arcsec_1992_Broeils_table_4:map(r_for_alpha)
 local beta_corr_1992_Broeils = v_corr_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s
 
-local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
-	style = 'data lines',
-	xlabel = "r (kpc)",
-	ylabel = 'v/c',
-	title = "Normalized rotation curve of NGC 1560",
-	xrange = {rvec[1], rvec[#rvec]},
-	yrange = {(table.inf(betavec)), (table.sup(betavec))},
-	data = {
-		rvec,
-		betavec,
-		r_in_kpc_1992_Broeils_table_4, 
-		beta_corr_1992_Broeils
-	},
-	key = 'bottom right',
-	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
-}
--- CHECK
+if calcRotCurveGraphs then
+	local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
+		style = 'data lines',
+		xlabel = "r (kpc)",
+		ylabel = 'v/c',
+		title = "Normalized rotation curve of NGC 1560",
+		xrange = {rvec[1], rvec[#rvec]},
+		yrange = {(table.inf(betavec)), (table.sup(betavec))},
+		data = {
+			rvec,
+			betavec,
+			r_in_kpc_1992_Broeils_table_4, 
+			beta_corr_1992_Broeils
+		},
+		key = 'bottom right',
+		{using='1:2', title='2021 Ludwig'},
+		{using='3:4', title='1992 Broeils', with='points pointtype 7'},
+	}
+	-- CHECK
 
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__2a_NGC_1560_rotation_velocity_of_spheriod_eqn_4.14.svg",
-	style = 'data lines',
-	xlabel = 'r (kpc)',
-	xrange = {rvec[1], rvec[#rvec]},
-	ylabel = 'v/c',
-	yrange = {0, .0015},
-	title = 'Rotation velocity of a spheroid',
-	data = {
-		rvec,
-		rvec:map(betacirc_for_r_eqn_4_14),
-		betavec,
-		r_in_kpc_1992_Broeils_table_4, 
-		beta_corr_1992_Broeils
-		--v_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s,
-	},
-	{using='1:2', title='2021 Ludwig, β-circular'},
-	{using='1:3', title='2021 Ludwig, β'},
-	{using='4:5', title='1992 Broeils, β-corrected', with='points pointtype 7'},	-- is in the 2021 Ludwig paper
-	--{using='4:6', title='beta 1992 Broeils', with='points pointtype 7'},			-- not in the 2021 Ludwig paper
-}
--- CHECK
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__2a_NGC_1560_rotation_velocity_of_spheriod_eqn_4.14.svg",
+		style = 'data lines',
+		xlabel = 'r (kpc)',
+		xrange = {rvec[1], rvec[#rvec]},
+		ylabel = 'v/c',
+		yrange = {0, .0015},
+		title = 'Rotation velocity of a spheroid',
+		data = {
+			rvec,
+			rvec:map(betacirc_for_r_eqn_4_14),
+			betavec,
+			r_in_kpc_1992_Broeils_table_4, 
+			beta_corr_1992_Broeils
+			--v_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s,
+		},
+		{using='1:2', title='2021 Ludwig, β-circular'},
+		{using='1:3', title='2021 Ludwig, β'},
+		{using='4:5', title='1992 Broeils, β-corrected', with='points pointtype 7'},	-- is in the 2021 Ludwig paper
+		--{using='4:6', title='beta 1992 Broeils', with='points pointtype 7'},			-- not in the 2021 Ludwig paper
+	}
+	-- CHECK
+end
 
 local rvec = xvec * lbeta
+-- if I have to normalize it ... then why do I call it "normrho_for_r_z..."?
 local normphivec = rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a) / math.abs(normphi_for_r_z_eq_0_eqn_5_2_a(rvec[1]))
 local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b) / math.abs(normrho_for_r_z_eq_0_eqn_5_2_b(rvec[1]))
 gnuplot{
@@ -1262,11 +1283,11 @@ gnuplot{
 		rvec,
 		rvec:map(function(r)
 			local alpha = alpha_for_r(r)
-			--[[ looks too fat
+			-- [[ looks too fat
 			-- no dif with section 7's variables
 			return mu_for_alpha_eqn_D_11(alpha)
 			--]]
-			-- [[ looks more like fig. 3a ...
+			--[[ looks more like fig. 3a ...
 			-- look much fatter with section 7's variables
 			return mu_for_alpha_eqn_D_8(alpha)
 			--]]
@@ -1277,6 +1298,7 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'}, 
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
 }
+-- FIXME
 
 -- -- for the sake of the luminosity profile, section 7 still has no mention of s1, s2, or alpha1 ...
 -- -- now the mu0 matches, but if I use this alpha0 then the graphs no longer match.
@@ -1357,27 +1379,28 @@ alphamax = alpha_for_r(rmax)
 
 rmax_check = rmax_eqn_C_15()	-- rmax_check = 12.2202643935 vs 12.2 ... close
 
-
-local rvec = xvec * rmax
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__5b_NGC_1560_gravitational_potential.svg",
-	style = 'data lines',
-	xlabel = "r (kpc)",
-	xrange = {rvec[1], rvec[#rvec]},
-	format = {y = '%.2e'},
-	title = 'Gravitatioanl potential of NGC 1560',
-	data = {
-		rvec,
-		rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
-	},
-	{using='1:2', title=''},
-	{'0', title='', lc='rgb "grey"'},	-- zero line
-}
--- fail
--- seems I need a different normphi(r,z) ...
--- if I use the old a, b, rs then this has too big of an amplitude
--- if I use the new a, b, rs then this has too small of an amplitude
+if calcGravPotGraphs then
+	local rvec = xvec * rmax
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__5b_NGC_1560_gravitational_potential.svg",
+		style = 'data lines',
+		xlabel = "r (kpc)",
+		xrange = {rvec[1], rvec[#rvec]},
+		format = {y = '%.2e'},
+		title = 'Gravitatioanl potential of NGC 1560',
+		data = {
+			rvec,
+			rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
+		},
+		{using='1:2', title=''},
+		{'0', title='', lc='rgb "grey"'},	-- zero line
+	}
+	-- fail
+	-- seems I need a different normphi(r,z) ...
+	-- if I use the old a, b, rs then this has too big of an amplitude
+	-- if I use the new a, b, rs then this has too small of an amplitude
+end
 
 -- eqn C5: lambda = 4 pi R0^3 rho0 / (3 M)
 -- checking R0 based on NGC 1560's M, lambda, rho0:
@@ -1414,7 +1437,7 @@ gnuplot{
 -- CHECK 
 -- has a bump at alphaeff that can be fixed by re-deriving the b1, d1, d2 coeffs, just like NGC 3198
 
-
+YOrder=-1
 
 --[[
 eqn D.12.a:
@@ -1431,53 +1454,6 @@ normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_19
 --]]
 
 local rvec = makePow10Range(.01, rmax)
--- [[ ok now it's a CHECK for the points but a FIXME for the curve 
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_D12_a.svg",
-	xlabel = "r (kpc)",
-	ylabel = "ρ / ρ0",
-	style = 'data lines',
-	title = 'Normalized mass density of NGC 1560',
-	log = 'x',
-	data = {
-		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a),
-		r_in_kpc_1992_Broeils_table_3,
-		normrho_for_lum_1992_Broeils,
-	},
-	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
-}
---]]
-
--- [[ ok now it's a CHECK for the points but a FIXME for the curve 
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_D12_b.svg",
-	xlabel = "r (kpc)",
-	ylabel = "ρ / ρ0",
-	style = 'data lines',
-	title = 'Normalized mass density of NGC 1560',
-	log = 'x',
-	data = {
-		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b),
-		r_in_kpc_1992_Broeils_table_3,
-		normrho_for_lum_1992_Broeils,
-	},
-	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
-}
---]]
-
--- [[ FAIL - inflection is too far to the right ... until I changed something, and now it's 100% wrong.
-local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b)
---local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
---local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_a)
---local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_9_1_b)
---local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_a)
---local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_D_12_b)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
@@ -1488,14 +1464,15 @@ gnuplot{
 	log = 'x',
 	data = {
 		rvec,
-		normrhovec / normrhovec[1],
+		--rvec:map(normrho_for_r_NGC_1560),			-- works, but isn't provided in the paper
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),	-- works if YOrder=-1
 		r_in_kpc_1992_Broeils_table_3,
 		normrho_for_lum_1992_Broeils,
 	},
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
---]]
+-- CHECK
 
 
 -- TODO CAN'T DO THIS UNTIL YOU FIX NORMRHO!
@@ -1511,8 +1488,8 @@ Section 7 text beneath Fig 4:
 
 and then you look at C.18, and just give up all hope. 
 --]]
---[[
-do	--if calcGravPotGraphs then
+-- [[
+if calcRotCurveGraphs then
 	local rvec, betavec = makeRotationCurve(
 		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
 		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
@@ -1527,7 +1504,7 @@ do	--if calcGravPotGraphs then
 		data = {
 			rvec,
 			betavec,
-			r_in_kpc_1992_Broeils,
+			r_in_kpc_1992_Broeils_table_4,
 			beta_corr_1992_Broeils,
 		},
 		{using='1:2', title='2021 Ludwig'},
@@ -1864,7 +1841,7 @@ local function g_for_r_eqn_5_3_based_on_normrho_for_r_z_eq_0_eqn_8_4_b(r)
 end
 
 
-if calcGravPotGraphs then
+if calcRotCurveGraphs then
 	-- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
 	-- but ... the value is not provided in this paper.
 	-- well at least the 1989 Begeman paper looks correct
@@ -2391,7 +2368,9 @@ if calcGravPotGraphs then	-- because it's so slow
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
 	}
-	
+end
+
+if calcRotCurveGraphs then
 	local rvec = xvec * lbeta
 	local rvec, betavec = makeRotationCurve(
 		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
@@ -2443,7 +2422,7 @@ gnuplot{
 }
 
 -- normalized rotation curve with small increase in rs
-if calcGravPotGraphs then	
+if calcRotCurveGraphs then	
 	local rvec = xvec * lbeta
 	local rvec, betavec = makeRotationCurve(
 		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,

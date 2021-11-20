@@ -29,7 +29,7 @@ CHECK:	Fig 3a: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 
 CHECK:	Fig 3b: NGC 1560 Sersic index ... I bet my code or the paper has a typo somewhere ... 
 
-FIXME:	Fig 4a: NGC 1560 normalized mass density (using eqn D 12 b). ... too far over
+CHECK:	Fig 4a: NGC 1560 normalized mass density (using eqn D 13)
 CHECK:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
 
 TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ... so where do they get it from?)
