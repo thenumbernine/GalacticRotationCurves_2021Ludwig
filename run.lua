@@ -1954,7 +1954,9 @@ if calcGravPotGraphs then
 	-- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
 	-- but ... the value is not provided in this paper.
 	-- well at least the 1989 Begeman paper looks correct
-	local rvec, betavec = makeRotationCurve(f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b, g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	local rvec, betavec = makeRotationCurve(
+		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
+		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
 	--local rvec = xvec * rmax	-- equivalent, since rmax = 30.7, and lbeta = 29.4
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
@@ -2089,6 +2091,8 @@ if calcGravPotGraphs then	-- because it's so slow
 	-- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
 end
 
+
+
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
 print[[
 
@@ -2096,92 +2100,6 @@ print[[
 NGC 3115
 
 ]]
-
-
-mu0 = 15.21
-alphaeff = 1.88
-reff = 0.0911	-- kpc
-alpha0 = 18.24
-r0 = 0.884		-- kpc
-s0 = 0.845
-b2 = -0.00291
-b3 = -5.37e-6
-b4 = -1.13e-8
-b5 = 2.84e-10
-b6 = 5.38e-12
-b7 = 7.62e-15
-b8 = -1.07e-16
-d3 = 8.94e-9
-d4 = -1.42e-11
-d5 = -4.82e-16
-d6 = 2.04e-17
-d7 = -1.31e-20
-bPolyOrder = 8
-dPolyOrder = 7
-
-alphae = 983.45
-se = 2.43
-b1 = 0.116
-d2 = -2.21e-6
-
-rmax = 54.5	-- kpc
-Ms = -21.9
-Ls = 4.63 * Lsun	-- W
-d = 10 * 1000	-- kpc
-md = 8.08
-
-kspiral = 0.16	-- kpc?
-rspiral = 1.0	-- kpc
-gamma0 = 0.4
--- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 
--- section 8 says "gamma0 = gammai = ...", section 9 says "gamma0 = 0.4" 
--- ... did section 9 mean to imply that "gammai = gamm0" still / always / for NGC 3115 as well?
-gammai = gamma0
-
--- the paper says:
---y0 = 0.4
--- but the ridges on Fig 10.a don't rise nearly high enough (there's supposed to be concavity but with y0=0.4 there isn't)
--- but with y0 = 4.0 it looks right: ... typo anyone?
-y0 = 4.0
--- I'm guessing this can be validated with some least-squares calculations but meh, I'm not going to do it.  I'm doing enough work as it is.
-
-v = 0.3	-- v? nu? upsilon? 
-
--- Section 9, just before eqn 9.1: "These current rings can be represented taking two terms (i = 0, 1) in Eq. (8.1)." 
--- Likewise if you set this to 4 then you get extra peaks that shouldn't be there.
-YOrder = 1
-
-rs = 6.79e-6	-- kpc
-a = 5.83		-- kpc
-b = 0.282		-- kpc
-l = 4.3
-lambda = 0.432
-
-M = 7.28e+10 * Msun	-- kg
-rho0 = 5.09e-19		-- kg / m^3
-Upsilon = 1.57 * UpsilonSun	-- kg / W
-
-lrho = 47.7
-
-
-alphaeff_check = alpha_for_r(reff)		-- alphaeff_check = 1.879072384911 vs 1.88 ... close
-reff_check = r_for_alpha(alphaeff)		-- reff_check = 0.091144972048593 vs 0.0911 ... close
-alpha0_check = alpha_for_r(r0)			-- alpha0_check = 18.233808872243 vs 18.24 ... close
-r0_check = r_for_alpha(alpha0)			-- r0_check = 0.88430015434379 vs 0.884 ... close
-alphae_check = alpha_for_r(lrho)		-- alphae_check = 983.88312579865 vs 983.45 ... close
-se_check = se_eqn_D_20(mu_for_alpha_eqn_D_8)	-- se_check = 2.43 vs 2.43 ... check
-b1_check = b1_eqn_D_18_a()				-- b1_check = 0.11562347077137 vs 0.116 ... close
-d2_check = d2_eqn_D_18_b()				-- d2_check = -2.2101537775354e-06 vs -2.21e-6 ... close
-d_check = d_for_r_alpha(reff, alphaeff)	-- d_check = 9995.0658771864 vs 10000 ... close
-
--- we can do this to fix the tiny gap in the piecewise graph, which for NGC 3115 only appears in the Sersic index graph
-b1 = b1_check
-d2 = d2_check
-
--- why is lrho the name of the dist of alphae, when r0 is the dist of alpha0 and reff is the dist of alphaeff?
--- why not call it 're' instead of 'lrho' ?
-lrho_check = r_for_alpha(alphae)		-- lrho_check = 47.679001468717 vs 47.7 ... close
-rmax_check = rmax_eqn_C_15()			-- rmax_check = 54.555763851156 vs 54.5 ... close
 
 -- 1st col is alpha^(1/4), in arcseconds, so ^4 it to get the arcseconds
 -- 2nd col is the final processing major (axis?) luminosity in mag/arcsec^2 ... this is the one that the 2021 Ludwig paper uses
@@ -2262,6 +2180,147 @@ local _1987_Capaccioli_et_al_table_9 = table{
 	{5.50,	29.14,	math.nan},
 	{5.60,	29.42,	math.nan},
 }
+
+-- col 1 is radial dist in arcsec
+-- col 2 is the number of samples
+-- col 3 is velocity in km/s relative to the sun
+-- col 4 is velocity error range in km/s 
+-- col 5 is the velocity relative to NGC 3114
+local _1980_Rubin_et_al_table_2 = table{
+	-- NE data:
+	{-95.6,	3,	910,	26,	248},
+	{-90.8,	6,	912,	14,	250},
+	{-85.7,	6,	894,	8,	232},
+	{-80.6,	8,	967,	23,	305},
+	{-75.5,	8,	971,	21,	309},
+	{-70.3,	11,	938,	15,	276},
+	{-65.0,	15,	938,	11,	276},
+	{-59.9,	18,	931,	11,	269},
+	{-54.9,	21,	937,	15,	275},
+	{-50.0,	27,	921,	10,	259},
+	{-44.9,	28,	914,	9,	252},
+	{-39.8,	28,	915,	10,	253},
+	{-34.6,	28,	923,	10,	261},
+	{-29.5,	28,	923,	10,	261},
+	{-24.4,	27,	935,	9,	273},
+	{-19.3,	21,	931,	9,	269},
+	{-14.1,	19,	916,	9,	254},
+	{-9.1,	9,	866,	12,	204},
+	{-3.8,	4,	766,	28,	104},
+	-- center
+	{0,		2,	685,	6,	23},
+	-- SW data
+	{3.8,	4,	583,	21,	79},
+	{9.2,	10,	463,	26,	199},
+	{14.1,	17,	415,	16,	247},
+	{19.4,	23,	396,	12,	266},
+	{24.3,	26,	394,	11,	268},
+	{29.5,	27,	389,	9,	273},
+	{34.7,	28,	390,	7,	274},
+	{39.8,	28,	390,	7,	272},
+	{44.9,	28,	398,	9,	264},
+	{50.0,	27,	394,	8,	268},
+	{55.0,	25,	394,	8,	268},
+	{60.0,	20,	392,	11,	270},
+	{65.1,	20,	393,	13,	269},
+	{70.3,	18,	402,	17,	260},
+	{75.4,	18,	400,	24,	262},
+	{80.4,	14,	394,	23,	265},
+	{85.5,	10,	376,	33,	286},
+	{90.9,	4,	391,	17,	271},
+	{96.0,	4,	401,	21,	261},
+}
+
+
+
+mu0 = 15.21
+alphaeff = 1.88
+reff = 0.0911	-- kpc
+alpha0 = 18.24
+r0 = 0.884		-- kpc
+s0 = 0.845
+b2 = -0.00291
+b3 = -5.37e-6
+b4 = -1.13e-8
+b5 = 2.84e-10
+b6 = 5.38e-12
+b7 = 7.62e-15
+b8 = -1.07e-16
+d3 = 8.94e-9
+d4 = -1.42e-11
+d5 = -4.82e-16
+d6 = 2.04e-17
+d7 = -1.31e-20
+bPolyOrder = 8
+dPolyOrder = 7
+
+alphae = 983.45
+se = 2.43
+b1 = 0.116
+d2 = -2.21e-6
+
+rmax = 54.5	-- kpc
+Ms = -21.9
+Ls = 4.63 * Lsun	-- W
+d = 10 * 1000	-- kpc
+md = 8.08
+
+kspiral = 0.16	-- kpc?
+rspiral = 1.0	-- kpc
+gamma0 = 0.4
+-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 
+-- section 8 says "gamma0 = gammai = ...", section 9 says "gamma0 = 0.4" 
+-- ... did section 9 mean to imply that "gammai = gamm0" still / always / for NGC 3115 as well?
+gammai = gamma0
+
+-- the paper says:
+--y0 = 0.4
+-- but the ridges on Fig 10.a don't rise nearly high enough (there's supposed to be concavity but with y0=0.4 there isn't)
+-- but with y0 = 4.0 it looks right: ... typo anyone?
+y0 = 4.0
+-- I'm guessing this can be validated with some least-squares calculations but meh, I'm not going to do it.  I'm doing enough work as it is.
+
+v = 0.3	-- v? nu? upsilon? 
+
+-- Section 9, just before eqn 9.1: "These current rings can be represented taking two terms (i = 0, 1) in Eq. (8.1)." 
+-- Likewise if you set this to 4 then you get extra peaks that shouldn't be there.
+YOrder = 1
+
+rs = 6.79e-6	-- kpc
+a = 5.83		-- kpc
+b = 0.282		-- kpc
+l = 4.3
+lambda = 0.432
+
+M = 7.28e+10 * Msun	-- kg
+rho0 = 5.09e-19		-- kg / m^3
+Upsilon = 1.57 * UpsilonSun	-- kg / W
+
+lrho = 47.7
+
+lbeta = 4.64	-- kpc .. fig 10.b subtext
+
+
+alphaeff_check = alpha_for_r(reff)		-- alphaeff_check = 1.879072384911 vs 1.88 ... close
+reff_check = r_for_alpha(alphaeff)		-- reff_check = 0.091144972048593 vs 0.0911 ... close
+alpha0_check = alpha_for_r(r0)			-- alpha0_check = 18.233808872243 vs 18.24 ... close
+r0_check = r_for_alpha(alpha0)			-- r0_check = 0.88430015434379 vs 0.884 ... close
+alphae_check = alpha_for_r(lrho)		-- alphae_check = 983.88312579865 vs 983.45 ... close
+se_check = se_eqn_D_20(mu_for_alpha_eqn_D_8)	-- se_check = 2.43 vs 2.43 ... check
+b1_check = b1_eqn_D_18_a()				-- b1_check = 0.11562347077137 vs 0.116 ... close
+d2_check = d2_eqn_D_18_b()				-- d2_check = -2.2101537775354e-06 vs -2.21e-6 ... close
+d_check = d_for_r_alpha(reff, alphaeff)	-- d_check = 9995.0658771864 vs 10000 ... close
+
+-- we can do this to fix the tiny gap in the piecewise graph, which for NGC 3115 only appears in the Sersic index graph
+b1 = b1_check
+d2 = d2_check
+
+-- why is lrho the name of the dist of alphae, when r0 is the dist of alpha0 and reff is the dist of alphaeff?
+-- why not call it 're' instead of 'lrho' ?
+lrho_check = r_for_alpha(alphae)		-- lrho_check = 47.679001468717 vs 47.7 ... close
+rmax_check = rmax_eqn_C_15()			-- rmax_check = 54.555763851156 vs 54.5 ... close
+
+
 local alpha_in_arcsec_qtrt_1987_Capaccioli_et_al_table_9, luminosity_1987_Capaccioli_et_al_table_9 = matrix(_1987_Capaccioli_et_al_table_9):T():unpack()
 local alpha_in_arcsec_1987_Capaccioli_et_al_table_9 = alpha_in_arcsec_qtrt_1987_Capaccioli_et_al_table_9:map(function(x) return x*x*x*x end)
 
@@ -2392,8 +2451,15 @@ gnuplot{
 
 makeGalaxyWidthGraphs('Fig_11a', '3115')
 
-local rvec = xvec * rmax
+local alpha_in_arcsec_1980_Rubin_et_al_table_2, _, _, _, v_in_km_per_s_1980_Rubin_et_al_table_2 = matrix(_1980_Rubin_et_al_table_2):T():unpack()
+local r_in_kpc_1980_Rubin_et_al_table_2 = alpha_in_arcsec_1980_Rubin_et_al_table_2:map(r_for_alpha)
+local beta_1980_Rubin_et_al_table_2 = v_in_km_per_s_1980_Rubin_et_al_table_2 * 1000 / c_in_m_per_s
+
+lbeta_check = table.last(r_in_kpc_1980_Rubin_et_al_table_2)
+beta_at_lbeta = table.last(beta_1980_Rubin_et_al_table_2)
+
 if calcGravPotGraphs then	-- because it's so slow
+	local rvec = xvec * rmax
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig_11b_NGC_3115_gravitational_potential_eqn_C7.svg",
@@ -2409,7 +2475,31 @@ if calcGravPotGraphs then	-- because it's so slow
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
 	}
+	
+	local rvec = xvec * lbeta
+	local rvec, betavec = makeRotationCurve(
+		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
+		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig_10b_NGC_3115_normalized_rotation_curve.svg",
+		xlabel = "r (kpc)",
+		ylabel = "v / c",
+		style = 'data lines',
+		title = 'Normalized rotation curve of NGC 3115',
+		xrange = {0, lbeta},
+		data = {
+			rvec,
+			betavec,
+			r_in_kpc_1980_Rubin_et_al_table_2,
+			beta_1980_Rubin_et_al_table_2,
+		},
+		{using='1:2', title='2021 Ludwig'},
+		{using='(abs($3)):4', title='1980 Rubin et al', with='points pointtype 7'},
+	}
 end
+
+
 
 -- fig 12 has adjusted schwarzschild radius
 rs = 7.00e-6
@@ -2436,4 +2526,28 @@ gnuplot{
 	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
 }
 
--- TODO normalized rotation curve with small increase in rs
+-- normalized rotation curve with small increase in rs
+do	--if calcGravPotGraphs then	
+	local rvec = xvec * lbeta
+	local rvec, betavec = makeRotationCurve(
+		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
+		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig_12b_NGC_3115_normalized_rotation_curve_rs_adj.svg",
+		xlabel = "r (kpc)",
+		ylabel = "v / c",
+		style = 'data lines',
+		title = 'Normalized rotation curve of NGC 3115',
+		xrange = {0, lbeta},
+		data = {
+			rvec,
+			betavec,
+			r_in_kpc_1980_Rubin_et_al_table_2,
+			beta_1980_Rubin_et_al_table_2,
+		},
+		{using='1:2', title='2021 Ludwig'},
+		{using='(abs($3)):4', title='1980 Rubin et al', with='points pointtype 7'},
+	}
+end
+
