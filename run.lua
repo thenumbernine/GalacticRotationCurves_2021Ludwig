@@ -5,6 +5,7 @@ local table = require 'ext.table'
 local timer = require 'ext.timer'
 local math = require 'ext.math'
 local gnuplot = require 'gnuplot'
+
 local matrix = require 'matrix'
 
 local J1 = require 'J1'
@@ -19,6 +20,9 @@ local integrate = require 'integrate'
 --integrate.method = 'adaptlob'		-- goes slow with lua128
 integrate.method = 'simpson'	
 
+-- ivp function api: ivp(t, x, dt, f, ...)
+local ivp = require 'integrate.ivp.euler'
+
 local symmath = require 'symmath'
 symmath.fixVariableNames = true
 symmath.tostring = symmath.export.SingleLine
@@ -28,7 +32,7 @@ symmath.tostring = symmath.export.SingleLine
 local calcGravPotGraphs = false
 
 -- also goes slow:
-local calcRotCurveGraphs = true
+local calcRotCurveGraphs = false
 
 
 local Gstorage = {}
@@ -331,7 +335,6 @@ local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 		Y_for_r_eqn_8_1(r)
 		* math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
 	--]]
-	-- "where s(r) is the Sérsic profile adjusted to the luminosity:"
 end
 
 --[[
@@ -386,7 +389,7 @@ local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
 local normphi_for_r_z_eqn_5_2_a 
 local dz_eqn_6_9_root_expr_based_on_5_2_b
 local eqn_6_9_rhs_over_lambda		-- purely for debugging
-local dr_beta_for_r_eqn_5_1 		-- dbeta_dr(r, beta, f, g)
+local dr_beta_for_r_beta_f_g_eqn_5_1 		-- dbeta_dr(r, beta, f, g)
 local f_for_r_eqn_5_3
 local g_for_r_eqn_5_3
 timer("deriving root-finding", function()
@@ -430,7 +433,7 @@ timer("deriving root-finding", function()
 
 		-- this is assuming rs is a point mass, right?  and not distributed?
 		local dr_normphi_eqn_5_2_a_expr = normphi_eqn_5_2_a_expr:diff(r):prune() 
-		print('d/dr of eqn 5.2.a:', dr_normphi_eqn_5_2_a_expr)
+		print('∂/∂r of eqn 5.2.a:', dr_normphi_eqn_5_2_a_expr)
 
 		-- eqn 5.2.b
 		-- normalized density
@@ -465,13 +468,13 @@ timer("deriving root-finding", function()
 		
 		-- solving eqn 5.1 for dbeta/dr, but preserving f(r) and g(r) instead of analytically simplifying their replacement in, like eqn 5.3 does ...
 		local dr_beta_eqn_5_1_expr = eqn_5_1()
-		print('eqn 5.1 for dbeta/dr:', dr_beta_eqn_5_1_expr)
+		print('eqn 5.1 for ∂β/∂r:', dr_beta_eqn_5_1_expr)
 
 		dr_beta_eqn_5_1_expr = (dr_beta_eqn_5_1_expr - beta * g + r * beta^2 * beta:diff(r))()
-		print('eqn 5.1 for dbeta/dr:', dr_beta_eqn_5_1_expr)
+		print('eqn 5.1 for ∂β/∂r:', dr_beta_eqn_5_1_expr)
 
 		dr_beta_eqn_5_1_expr = (dr_beta_eqn_5_1_expr / (r * (g + beta^2)))()
-		print('eqn 5.1 for dbeta/dr:', dr_beta_eqn_5_1_expr)
+		print('eqn 5.1 for ∂β/∂r:', dr_beta_eqn_5_1_expr)
 
 --[[ TODO
 		local mu_for_alpha_eqn_D_11_expr = 
@@ -492,14 +495,14 @@ timer("deriving root-finding", function()
 
 
 		local eqn_6_9_root_expr_based_on_5_2_b_expr = normrho_eqn_5_2_b_expr:rhs() - eqn_6_9_rhs_over_lambda_expr
-		print(eqn_6_9_root_expr_based_on_5_2_b_expr)
+		print('eqn 6.9 root using eqn 5.2.b:', eqn_6_9_root_expr_based_on_5_2_b_expr)
 	
 		-- TODO - Variable evaluateDerivative is commented out in Variable because it is also duplciated in Derivative's prune() rule ...
 		
 		local dz_eqn_6_9_root_expr = eqn_6_9_root_expr_based_on_5_2_b_expr:diff(z):prune()
-		print(dz_eqn_6_9_root_expr)
+		print('∂/∂z eqn 6.9 root using eqn 5.2.b:', dz_eqn_6_9_root_expr)
 		
-		-- assert d/dx rhs == 0, 
+		-- assert ∂/∂x rhs == 0, 
 		-- such that if width = width_lhs - width_rhs then d/dz (width) == d/dz (width_lhs)
 		assert(Constant.isValue(eqn_6_9_rhs_over_lambda_expr:diff(z):prune(), 0))
 		
@@ -514,7 +517,7 @@ timer("deriving root-finding", function()
 		
 		dz_eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_6_9_root_expr}, input=argvars}
 	
-		dr_beta_for_r_eqn_5_1 = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
+		dr_beta_for_r_beta_f_g_eqn_5_1 = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
 
 		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
 		
@@ -574,6 +577,8 @@ local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
 	--]]
 end
 
+-- all the galaxy width functions seem to be dependent on normrho(r,z) eqn 5.2.b ... but that is specific to spheroids ... 
+-- I'm surprised these graphs don't only work for the normrho(r,z) defined elsewhere, like 8.4.a 
 local function makeGalaxyWidthGraphs(figname, name)
 	local rvec = xvec * rmax
 	timer('plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b', function()
@@ -690,38 +695,68 @@ so this makes the smooth graphs of a spheroid rotation curve.
 how to get the bumpy ones? 
 maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
 yes, sure enough, (down at the Fig__4b graphs) they replace the f(r) and g(r)
+
+hmm, how about a better integrator? would that make things go faster?
+
+∂β_∂r = (β * (β^2 * (1 - f) + f - g)) / (r * (g + β^2))
+
+forward-euler:
+β(t+dt) = β(t) + dt * dβ_dr(t)
+
+backward-euler:
+β(t+dt) = β(t) + dt * dβ_dr(t+dt)
+β(t+dt) - dt * dβ_dr(t+dt) - β(t) = 0
+
+-- solve the cubic for β(t+dt):
+	β(t+dt)^3 * (dt * (f - 1) + r)
+	+ β(t+dt)^2 * -β(t) * r
+	+ β(t+dt) * ((r + dt) * g - dt * f)
+	+ -β(t) * r * g
+	= 0
+
+β(t+dt) - dt * dβ_dr(t+dt) = β(t)
+... assume dβ_dr(t+dt) is linear and equal to A * β(t+dt)
+β(t+dt) - dt * A * β(t+dt) = β(t)
+β(t+dt) * (1 - dt * A) = β(t)
+β(t+dt) = β(t) / (1 - dt * A)
+
+			1000	500		200		100
+euler		good	bad				bad
+midpoint	good	bad				bad
+heun		bad		bad				bad
+rk2alpha	good	bad				bad
+rk4			bad		bad				bad
+rkf45		good	bad		bad		bad
 --]]
-local function makeRotationCurve(f, g)
+local function makeRotationCurve(dr_beta_fun, rL, rR)
 	local r = lbeta
 	local beta = beta_at_lbeta
 	local n = 1000			-- make 1000 points
-	local dr = lbeta / n
+	local dr = (rR - rL) / n
 	local rAndBetaVec = table()
---print('dr', dr)
---print('r', r, 'beta', beta)
+--print('dr', dr, 'r', r, 'beta', beta)
 
 	rAndBetaVec:insert{r, beta}
 
-	while r >= 0 do
-		local dbeta_dr = dr_beta_for_r_eqn_5_1(r, beta, f(r), g(r))
-		beta = beta + dbeta_dr * -dr
-		r = r + -dr
---print('r', r, 'beta', beta, 'dbeta_dr', dbeta_dr)
+	while r > rL do
+local oldbeta = beta
+		r, beta = r - dr, ivp(r, beta, -dr, dr_beta_fun)
+print('r='..r..' β='..beta..' ∂β/∂r='..((beta - oldbeta) / -dr))
 		rAndBetaVec:insert{r, beta}
 	end
 	
 	local r = lbeta
 	local beta = beta_at_lbeta
 
---[[ only figure 4 rhs has graph data from r=0 through r=lbeta=8.29 to r=rmax=12
+-- [=[ only figure 4 rhs has graph data from r=0 through r=lbeta=8.29 to r=rmax=12
 -- but this graph appears to be closest to fig 1 lhs, which goes from r=0 to r=lbeta=8.29
-	while r < 10 do
-		local dbeta_dr = dr_beta_for_r_eqn_5_1(r, beta, f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r))
-		beta = beta + dbeta_dr * dr
-		r = r + dr
+	while r < rR do
+local oldbeta = beta
+		r, beta = r + dr, ivp(r, beta, dr, dr_beta_fun)
+print('r='..r..' β='..beta..' ∂β/∂r='..((beta - oldbeta) / dr))
 		rAndBetaVec:insert{r, beta}
 	end
---]]	
+--]=]
 	rAndBetaVec:sort(function(a,b) return a[1] < b[1] end) 
 
 	local rvec, betavec = matrix(rAndBetaVec):T():unpack()
@@ -784,25 +819,52 @@ local function g_eqn_4_12_b(r, dr_normphi)
 	return r * dr_normphi
 end
 
--- f from eqn 4.12a with normrho from
-local function f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b(r)
+-- f from eqn 4.12a with normrho from ... 
+local function f_for_r_eqn_4_12_a(r)
+	--local normrho = normrho_for_r_z_eq_0_eqn_5_2_b(r)
 	local normrho = normrho_for_r_z_eq_0_eqn_8_4_b(r)
+	--local normrho = normrho_for_r_z_eq_0_eqn_D_12_a(r)
+	--local normrho = normrho_for_r_z_eq_0_eqn_D_12_b(r)
 	return f_eqn_4_12_a(r, normrho)
 end
 
--- g from eqn 4.12b with dr_normphi from
-local function g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18(r)
+-- g from eqn 4.12b with dr_normphi from eqn C.18
+local function g_for_r_eqn_4_12_b(r)
 	local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r)
 	return g_eqn_4_12_b(r, dr_normphi)
 end
 
+-- eqn 4.14 .a=.c, also eqn 3.17
+local function beta_for_g_eqn_4_14(g)
+	return math.sqrt(g)
+end
+
 -- eqn 3.17:
 -- v^2 ~ R dphi/dR
--- eqn 4.14:
+-- eqn 4.14 .b=.c:
 -- beta^2 = r d/dr normphi(r,z=0) = g(r)
 -- (using the 5.2a definition of normphi(r,z))
-local function betacirc_for_r_eqn_4_14(r)
-	return math.sqrt(g_for_r_eqn_5_3(r))
+local function beta_circ_for_r_eqn_4_14_using_eqn_5_3(r)
+	return beta_for_g_eqn_4_14(g_for_r_eqn_5_3(r))
+end
+
+-- TODO eqn 4.14 .a=.b:
+-- beta^2 = r d/dr normphi(r,0)
+
+-- TODO eqn 4.15 
+-- dbeta/dr = sqrt( f(r) (1 - beta^2) / r )
+local function dr_beta_for_r_beta_eqn_4_15(r, beta, f)
+	return math.sqrt(f * (1 - beta * beta) / r)
+end
+
+-- eqn 4.13:
+-- (beta^2 + g(r)) r (dbeta/dr)^2 = 2 (1 - f(r)) * beta^4 + 2 (f(r) - g(r)) beta^2
+-- dbeta/dr = beta sqrt( (2 (1 - f(r)) * beta^2 + 2 (f(r) - g(r))) / (r (beta^2 + g(r))) )
+local function dr_beta_for_r_beta_f_g_eqn_4_13(r, beta, f, g)
+	return math.sqrt( 
+		(2 * (1 - f) * beta^4 + 2 * (f - g) * beta^2) 
+		/ (r * (beta^2 + g)) 
+	)
 end
 
 -- not used.  looks bad when used for plotting Fig 3.b
@@ -1054,7 +1116,9 @@ local r_in_kpc_1992_Broeils_table_4 = alpha_in_arcsec_1992_Broeils_table_4:map(r
 local beta_corr_1992_Broeils = v_corr_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s
 
 if calcRotCurveGraphs then
-	local rvec, betavec = makeRotationCurve(f_for_r_eqn_5_3, g_for_r_eqn_5_3)
+	local rvec, betavec = makeRotationCurve(function(r, beta)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(r, beta, f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r))
+		end, 0, lbeta)
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig__1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
@@ -1087,7 +1151,7 @@ if calcRotCurveGraphs then
 		title = 'Rotation velocity of a spheroid',
 		data = {
 			rvec,
-			rvec:map(betacirc_for_r_eqn_4_14),
+			rvec:map(beta_circ_for_r_eqn_4_14_using_eqn_5_3),
 			betavec,
 			r_in_kpc_1992_Broeils_table_4, 
 			beta_corr_1992_Broeils
@@ -1490,9 +1554,23 @@ and then you look at C.18, and just give up all hope.
 --]]
 -- [[
 if calcRotCurveGraphs then
+	-- [[ this worked for figure 1 ... but no other figures
 	local rvec, betavec = makeRotationCurve(
-		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
-		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+		function(r, beta)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+			--return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+			--return dr_beta_for_r_beta_eqn_4_15(r, beta, 	-- doesn't integrate across the full domain.  negative just flips it, still fails. 
+				r, beta, 
+				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[
+	local rvec = xvec * rmax
+	local betavec = 
+	--]]
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig__4b_NGC_1560_normalized_rotation_curve.svg",
@@ -1754,6 +1832,7 @@ local normrho_1987_Kent_table_2 = rho_1987_Kent_table_2 / rho_1987_Kent_table_2[
 
 -- "The mass density profile extends to the last measurement taken at lrho = 1.41 kpc"
 -- so looks like this mass density graph uses lrho as the rmax instead of rmax (like I think figure 3 used)
+-- TODO what does this look like with normrho 8.4a?
 local rvec = makePow10Range(.1, lrho)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
@@ -1845,9 +1924,14 @@ if calcRotCurveGraphs then
 	-- Looks like beta(lbeta) does match with the sample data, fig 7b says came from Begeman source
 	-- but ... the value is not provided in this paper.
 	-- well at least the 1989 Begeman paper looks correct
-	local rvec, betavec = makeRotationCurve(
-		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
-		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	local rvec, betavec = makeRotationCurve(function(r, beta)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(
+				r, beta, 
+				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r) 
+			)
+		end,
+		0, rmax)
 	--local rvec = xvec * rmax	-- equivalent, since rmax = 30.7, and lbeta = 29.4
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
@@ -1881,6 +1965,11 @@ I'm trying to generalize the rotation curve generation too quickly in this funct
 makeGalaxyWidthGraphs('Fig__8a', '3198')
 
 
+-- eqn 4.14
+local function dr_normphi_for_r_g_eqn_4_14(r, g)
+	return math.sqrt(g) / r
+end
+
 local rvec = xvec * rmax
 
 --[[ From section 8, bottom of page 186, first column:
@@ -1893,7 +1982,7 @@ which would mean that d/dr normphi(r) = sqrt(g(r))/r
 ... for ... i'm guessing ... g(r) being the circular velocity profile, in eqn 5.3 (as eqn 4.14 and eqn 3.17 use)?
 --]]	
 local dr_normphi_vec = rvec:map(function(r)
-	return math.sqrt(g_for_r_eqn_5_3(r)) / r
+	return dr_normphi_for_r_g_eqn_4_14(r, g_for_r_eqn_5_3(r))
 end)
 
 if calcGravPotGraphs then	-- because it's so slow
@@ -1970,12 +2059,18 @@ gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "NGC_3198_normalized_rotation_curve_2006_Cooperstock_Fig_3.svg",
 	xlabel = "r (kpc)",
-	ylabel = "v",
+	ylabel = "v / c",
 	style = 'data lines',
 	title = 'Normalized rotation curve of NGC 3198',
 	xrange = {0, rmax},
-	data = {rvec, rvec:map(v_for_r) / c_in_m_per_s},
-	{using='1:2', title=''},
+	data = {
+		rvec, 
+		rvec:map(v_for_r) / c_in_m_per_s,
+		r_in_kpc_1989_Begeman,
+		beta_1989_Begeman,
+	},
+	{using='1:2', title='2006 Cooperstock'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 --[[
 CHECK
@@ -2273,6 +2368,29 @@ but with my guess of a typo "y0 = 4.0" this is a CHECK -- looks correct.
 --]]
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_8.4b.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ / ρ0",
+	style = 'data lines',
+	title = 'Normalized mass density of NGC 3115 (eqn 8.4b)',
+	log = 'xy',
+	xrange = {rvec[1], rvec[#rvec]},
+	--yrange = {1e-6, 1},
+	format = {y = '%.2e'},
+	data = {
+		rvec,
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),
+		r_in_kpc_1987_Capaccioli_et_al_table_9,
+		normrho_1987_Capaccioli_et_al_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
+}
+
+--[=[ these two should match above.
+-- CHECK
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_8.4a.svg",
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
@@ -2292,27 +2410,6 @@ gnuplot{
 	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
 }
 
--- CHECK
-gnuplot{
-	terminal = 'svg size 1024,768 background rgb "white"',
-	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_8.4b.svg",
-	xlabel = "r (kpc)",
-	ylabel = "ρ / ρ0",
-	style = 'data lines',
-	title = 'Normalized mass density of NGC 3115 (eqn 8.4b)',
-	log = 'xy',
-	xrange = {rvec[1], rvec[#rvec]},
-	--yrange = {1e-6, 1},
-	format = {y = '%.2e'},
-	data = {
-		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),
-		r_in_kpc_1987_Capaccioli_et_al_table_9,
-		normrho_1987_Capaccioli_et_al_table_9,
-	},
-	{using='1:2', title='2021 Ludwig'},
-	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
-}
 
 -- [[ CHECK
 -- THIS FAILS WITH THE INCORRECT EQUATION IN 9.1b
@@ -2341,6 +2438,7 @@ gnuplot{
 	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
 }
 --]]
+--]=]
 
 makeGalaxyWidthGraphs('Fig_11a', '3115')
 
@@ -2372,9 +2470,14 @@ end
 
 if calcRotCurveGraphs then
 	local rvec = xvec * lbeta
-	local rvec, betavec = makeRotationCurve(
-		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
-		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	local rvec, betavec = makeRotationCurve(function(r, beta)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(
+				r, beta, 
+				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r)
+			)
+		end,
+		0, lbeta)
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig_10b_NGC_3115_normalized_rotation_curve.svg",
@@ -2424,9 +2527,14 @@ gnuplot{
 -- normalized rotation curve with small increase in rs
 if calcRotCurveGraphs then	
 	local rvec = xvec * lbeta
-	local rvec, betavec = makeRotationCurve(
-		f_eqn_4_12_a_using_normrho_for_r_z_eq_0_eqn_8_4_b,
-		g_eqn_4_12_b_using_dr_normphi_for_r_z_eq_0_eqn_C_18)
+	local rvec, betavec = makeRotationCurve(function(r, beta)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(
+				r, beta,
+				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r)
+			)
+		end,
+		0, lbeta)
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig_12b_NGC_3115_normalized_rotation_curve_rs_adj.svg",
