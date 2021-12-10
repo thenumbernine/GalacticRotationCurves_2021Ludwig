@@ -285,24 +285,20 @@ end
 -- eqn 8.5
 -- basically same as S(alpha) from eqn D13, but with (r, r0, re) swapped with (alpha, alpha0, alphae)
 local function s_for_r_eqn_8_5(r)
+	local alpha = alpha_for_r(r)
 	--[[ 
-	-- since r and alpha are linear, can we just do this? 
-	-- no.  
-	-- the coefficient of difference will scale with the polynomials ...
 	if r <= r0 then
-		return sb_for_alpha_eqn_D_17(r)
+		return sb_for_alpha_eqn_D_17(alpha)
 	end
 	if r <= re then
-		return sd_for_alpha_eqn_D_17(r)
+		return sd_for_alpha_eqn_D_17(alpha)
 	end
 	return se
 	--]]
 	-- [[ convert to alpha and evaluate accordingly
-	local alpha = alpha_for_r(r)
 	return s_for_alpha_eqn_D_13(alpha)
 	--]]
 end
-
 
 -- unlabeled equation?
 -- Same as eqn 8.4a, 8.4b, 9.1b except with Y(r) set to 1
@@ -311,31 +307,53 @@ end
 -- (Since there was no Y(r) defined for NGC 1560).
 -- I can't find it anywhere in the paper that this equation is given.
 local function normrho_for_r_NGC_1560(r)
-	return math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
+	local alpha = alpha_for_r(r)
+	local s = s_for_alpha_eqn_D_13(alpha)
+	return math.exp(-(r / reff) ^ (1 / s))
 end
 
--- eqn 8.4a
--- also eqn 9.1a (which I got to match eqn 9.1b)
--- does this mean that eqn 8.4b == eqn 9.1b ?
--- if mu(alpha) is of the form in eqn D.8 then everything cancels down to look like eqn. 8.4b
+--[[
+eqn 8.4a
+also eqn 9.1a (which I got to match eqn 9.1b)
+does this mean that eqn 8.4b == eqn 9.1b ?
+if mu(alpha) is of the form in eqn D.8 then everything cancels down to look like eqn. 8.4b
+--]]
 local function normrho_for_r_z_eq_0_eqn_8_4_a(r)
 	local alpha = alpha_for_r(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_8(alpha) - mu0))
 end
 
--- eqn 8.4b
--- ... has both these equations ... and they aren't even equal ... smh
+--[[
+Ok so what happens when we rewrite 8.4b in terms of mu(r)?
+I'm suspicious Fig 2.b uses something like this.
+Especially since Fig 4.a uses a similar trick: use the next section's equation and set Y(r) to 1 ...
+	normrho(r) = Y(r) 10^(-2/5 (mu(r) - mu0))
+	let Y(r) = 1 ...
+	mu(r) = mu0 - 5/(2 log(10)) log(normrho(r)) 
+	looks similar to D.8, if log(normrho(r)) = (alpha / alphaeff) ^ (1 / s(alpha))
+--]]
+local function mu_for_r_eqn_8_4_a(r, normrho)
+	return mu0 - 5 / (2 * math.log(10)) * math.log(normrho)
+end
+
+--[[
+eqn 8.4b
+... has both these equations ... and they aren't even equal ... smh
+--]]
 local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	--[[ can't do this without s1 and s1 of the galaxy being defined ... which it is not for NGC 3198
 	local alpha = alpha_for_r(r)
 	return Y_for_r_eqn_8_1(r) * 10 ^ (-2/5 * (mu_for_alpha_eqn_D_11(alpha) - mu0))
 	--]]
 	-- [[ looks good
+	local alpha = alpha_for_r(r)
+	local s = s_for_alpha_eqn_D_13(alpha)
 	return 
 		Y_for_r_eqn_8_1(r)
-		* math.exp(-(r / reff) ^ (1 / s_for_r_eqn_8_5(r)))
+		* math.exp(-(r / reff) ^ (1 / s))
 	--]]
 end
+
 
 --[[
 seems 9.1b is not equal to 9.1a
@@ -1094,6 +1112,14 @@ local _1992_Broeils_table_4 = table{
 	{570, 76.6, 78.7},
 }
 
+-- SOOOOO
+-- shitty paper
+-- it never specifies to treat Y(r) = 1 for NGC 1560 ... 
+-- ... and it doesn't even mention the Y(r) equations until after, in the NGC 3198 and NGC 3115 sections
+-- (eqn 8.4a, 8.4b, 9.1b ...)
+-- buuut some graphs only work correctly if you use this later function and this substitution
+-- so I'll just set it here.
+YOrder = -1
 
 -- section 6, on spheroid fitting to NGC 1560 and then on solving the Abel equation for beta (= v/c?)
 a = .373					-- kpc
@@ -1342,18 +1368,30 @@ gnuplot{
 	title = "Luminosity profile of NGC 1560",
 	--xrange = {rvec[1], rvec[#rvec]},	-- graph goes to 6.4, xrange goes to 8 ... hmm ...
 	xrange = {0, lbeta},
-	yrange = {[3] = 'reverse'},
+	yrange = {[3] = 'reverse', 
+		-- 31, 21
+	},
 	data = {
 		rvec,
 		rvec:map(function(r)
-			local alpha = alpha_for_r(r)
-			-- [[ looks too fat
+			--[[ looks too fat
 			-- no dif with section 7's variables
+			local alpha = alpha_for_r(r)
 			return mu_for_alpha_eqn_D_11(alpha)
 			--]]
 			--[[ looks more like fig. 3a ...
 			-- look much fatter with section 7's variables
+			local alpha = alpha_for_r(r)
 			return mu_for_alpha_eqn_D_8(alpha)
+			--]]
+			-- [[ how about something that relates mu_B and either rho or phi of Fig 1.b?
+			-- lhs peak looks better, but falloff is too quick.
+			local normrho = normrho_for_r_z_eq_0_eqn_5_2_b(r)		-- looks more similar to the graph
+			--local normrho = normrho_for_r_z_eq_0_eqn_8_4_b(r)		-- fits perfectly
+			--local normrho = normrho_for_r_z_eq_0_eqn_D_12_a(r)	-- curve is not sharp enough
+			--local normrho = normrho_for_r_z_eq_0_eqn_D_12_b(r)		-- same
+			return mu_for_r_eqn_8_4_a(r, normrho)
+				 / 18.5 * 22.3
 			--]]
 		end),
 		r_in_kpc_1992_Broeils_table_3,
@@ -1455,9 +1493,12 @@ if calcGravPotGraphs then
 		title = 'Gravitatioanl potential of NGC 1560',
 		data = {
 			rvec,
-			rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
+			--rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
+			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
+			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
 		},
-		{using='1:2', title=''},
+		{using='1:2', title='normphi'},
+		{using='1:3', title='d/dr normphi'},
 		{'0', title='', lc='rgb "grey"'},	-- zero line
 	}
 	-- fail
@@ -1484,7 +1525,6 @@ r0_check = r_for_alpha(alpha0)		-- r0_check = 2.04058078379 vs 2.04 ... close
 r1 = r_for_alpha(alpha1)
 
 
-
 local alphavec = xvec * alphae
 
 gnuplot{
@@ -1501,7 +1541,6 @@ gnuplot{
 -- CHECK 
 -- has a bump at alphaeff that can be fixed by re-deriving the b1, d1, d2 coeffs, just like NGC 3198
 
-YOrder=-1
 
 --[[
 eqn D.12.a:
@@ -1529,7 +1568,7 @@ gnuplot{
 	data = {
 		rvec,
 		--rvec:map(normrho_for_r_NGC_1560),			-- works, but isn't provided in the paper
-		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),	-- works if YOrder=-1
+		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),	-- works if YOrder = -1
 		r_in_kpc_1992_Broeils_table_3,
 		normrho_for_lum_1992_Broeils,
 	},
@@ -2000,6 +2039,7 @@ if calcGravPotGraphs then	-- because it's so slow
 		},
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
+		{'0', title='', lc='rgb "grey"'},	-- zero line
 	}
 	-- if I could match phi(r), then I bet I could match d/dr phi(r)
 	-- and then I bet I could match the rotation curve v/c = beta(r) = sqrt(r d/dr phi) ... ??? or is it the Abel function solution?
@@ -2070,7 +2110,7 @@ gnuplot{
 		beta_1989_Begeman,
 	},
 	{using='1:2', title='2006 Cooperstock'},
-	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
+	{using='3:4', title='1989 Begeman', with='points pointtype 7'},
 }
 --[[
 CHECK
@@ -2465,6 +2505,7 @@ if calcGravPotGraphs then	-- because it's so slow
 		},
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
+		{'0', title='', lc='rgb "grey"'},	-- zero line
 	}
 end
 
