@@ -461,7 +461,7 @@ timer("deriving root-finding", function()
 		-- also equation C.14
 		local normrho_eqn_5_2_b_expr = normrho:eq(
 			(b*b / (3 * lambda)) * (
-				a*r*r 
+				a*r*r
 				+ (a + 3 * tmp) * (a + tmp)^2
 			) / (
 				(r*r + (a + tmp)^2)^frac(5,2)
@@ -892,6 +892,32 @@ local function S_eqn_D_19(alpha)
 end
 
 
+-- R0's def:
+-- in the text after eqn 4.5
+-- and in the text after eqn C.3
+local R0_in_kpc = 1 -- kpc
+local R0_in_m = R0_in_kpc * 1000 * m_in_pc
+
+-- eqn 4.9.a
+-- also eqn C.8
+-- rs = 2 * G * M / (c^2 * R0)
+-- notice, typically the Schwarzschild radius rs is defined as rs = 2 M * G / c^2 ... 
+-- ... so where does this R0 come into play?
+local function rs_eqn_4_9_a()
+	return 2 * G_over_c2_in_m_per_kg * M / R0_in_m
+end
+
+-- assuming rho0 is in kg/m^3 ... means we need to use R0_in_m^3 ... and M is in kg ...
+local function lambda_eqn_4_9_b()
+	return (4/3) * math.pi * R0_in_m^3 * rho0 / M
+end
+
+local function rho0_eqn_4_9_b()
+	return (3 * M * lambda) / (4 * math.pi * R0_in_m^3)
+end
+
+
+
 --[[ 
 text after eqn 4.5: 
 beta = v(R,0) / c
@@ -1130,8 +1156,17 @@ v_at_lbeta = 80				-- km/s
 beta_at_lbeta = 0.000267	-- unitless <-> v / c
 M = 7.3e+10 * Msun			-- kg
 
--- section 7:
+--[[ take lambda from section 7:
 lambda = 0.134
+-- inferred from a,b,lambda
+-- different from the rho0 in section 7, which uses a different a,b (and same lambda)
+-- idk why I am even calculating this, I don't need it.
+rho0 = rho0_eqn_4_9_b()		-- rho0 = 1.5810442712768e-19	-- kg/m^3
+--]]
+-- [[ alternatively, take rho0 from section 7, and calculate lambda
+rho0 = 3.31e-20				-- kg/m^3
+lambda = lambda_eqn_4_9_b()	-- lambda = 0.028053610392694
+--]]
 
 -- defined in Appendix D text after eqn D.11 ... but used for NGC 1560 graphs in section 6 graphs ... smh 
 d = 3.0 * 1000 -- kpc
@@ -1359,6 +1394,7 @@ mu(r) = mu0 - 5/2 log10(normrho)
 
 --]]
 local rvec = xvec * lbeta
+local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_5_2_b) / math.abs(normrho_for_r_z_eq_0_eqn_5_2_b(rvec[1]))
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__2b_NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
@@ -1368,31 +1404,15 @@ gnuplot{
 	title = "Luminosity profile of NGC 1560",
 	--xrange = {rvec[1], rvec[#rvec]},	-- graph goes to 6.4, xrange goes to 8 ... hmm ...
 	xrange = {0, lbeta},
-	yrange = {[3] = 'reverse', 
-		-- 31, 21
-	},
+	yrange = {[3] = 'reverse', 31, 21},
 	data = {
 		rvec,
-		rvec:map(function(r)
-			--[[ looks too fat
-			-- no dif with section 7's variables
-			local alpha = alpha_for_r(r)
-			return mu_for_alpha_eqn_D_11(alpha)
-			--]]
-			--[[ looks more like fig. 3a ...
-			-- look much fatter with section 7's variables
-			local alpha = alpha_for_r(r)
-			return mu_for_alpha_eqn_D_8(alpha)
-			--]]
-			-- [[ how about something that relates mu_B and either rho or phi of Fig 1.b?
-			-- lhs peak looks better, but falloff is too quick.
-			local normrho = normrho_for_r_z_eq_0_eqn_5_2_b(r)		-- looks more similar to the graph
-			--local normrho = normrho_for_r_z_eq_0_eqn_8_4_b(r)		-- fits perfectly
-			--local normrho = normrho_for_r_z_eq_0_eqn_D_12_a(r)	-- curve is not sharp enough
-			--local normrho = normrho_for_r_z_eq_0_eqn_D_12_b(r)		-- same
+		rvec:size():lambda(function(i)
+			local r = rvec[i]
+			-- ok here we have normrho from eqn 5.2b, used in figure 1.b
+			-- and that normrho inserted into eqn 8.4a solved for mu(r) in terms of normrho
+			local normrho = normrhovec[i]
 			return mu_for_r_eqn_8_4_a(r, normrho)
-				 / 18.5 * 22.3
-			--]]
 		end),
 		r_in_kpc_1992_Broeils_table_3,
 		luminosity_1992_Broeils,
@@ -1400,7 +1420,7 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'}, 
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
 }
--- FIXME
+-- CHECK
 
 -- -- for the sake of the luminosity profile, section 7 still has no mention of s1, s2, or alpha1 ...
 -- -- now the mu0 matches, but if I use this alpha0 then the graphs no longer match.
@@ -1441,27 +1461,6 @@ print('dSb_dalpha(alpha0) = '..dSb_dalpha(alpha0)..' should equal dSd_dalpha(alp
 print('dSd_dalpha(alphae) = '..dSd_dalpha(alphae)..' should equal 0')
 -- dSd_dalpha(alphae) = 0.49270654394305 should equal 0
 -- FAIL
-
-
--- R0's def:
--- in the text after eqn 4.5
--- and in the text after eqn C.3
-local R0_in_kpc = 1 -- kpc
-local R0_in_m = R0_in_kpc * 1000 * m_in_pc
-
--- eqn 4.9.a
--- also eqn C.8
--- rs = 2 * G * M / (c^2 * R0)
--- notice, typically the Schwarzschild radius rs is defined as rs = 2 M * G / c^2 ... 
--- ... so where does this R0 come into play?
-local function rs_eqn_4_9_a()
-	return 2 * G_over_c2_in_m_per_kg * M / R0_in_m
-end
-
--- assuming rho0 is in kg/m^3 ... means we need to use R0_in_m^3 ... and M is in kg ...
-local function lambda_eqn_4_9_b()
-	return (4/3) * math.pi * R0_in_m^3 * rho0 / M
-end
 
 
 -- section 7 text:

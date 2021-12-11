@@ -20,7 +20,7 @@ CHECK:	Fig 1b: NGC 1560 gravitational potential
 CHECK:	Fig 2a: NGC 1560 circular velocity of a spheroid vs fig1a velocity of spheroid
 CHECK:	Fig 2a: NGC 1560 - sampled rotation velocity of spheroid from 1992 Broeils 
 
-FIXME:	Fig 2b: NGC 1560 luminosity profile	 ... *CLOSE* but muB=31 too early, at r=4 instead of r=6.25
+CHECK:	Fig 2b: NGC 1560 luminosity profile
 CHECK:	Fig 2b: NGC 1560 - sampled luminosity from 1992 Broeils table 3
 
 CHECK:	Fig 3a: NGC 1560 luminosity profile, adjusted (using the Appendix D variables)
