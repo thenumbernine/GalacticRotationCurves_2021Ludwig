@@ -1,4 +1,4 @@
-#!/usr/bin/env lua128
+#!/usr/bin/env lua
 
 local range = require 'ext.range'
 local table = require 'ext.table'
@@ -18,7 +18,7 @@ local bisectRootFind = require 'bisect'
 -- integration function api: integrate(f, xL, xR, n)
 local integrate = require 'integrate'
 --integrate.method = 'adaptlob'		-- goes slow with lua128
-integrate.method = 'simpson'	
+integrate.method = 'simpson'
 
 -- ivp function api: ivp(t, x, dt, f, ...)
 local ivp = require 'integrate.ivp.euler'
@@ -49,7 +49,7 @@ setmetatable(_G, {
 
 
 -- Section 5, after eqn 5.3 (sloppiest research paper ever)
-local Msun = 1.9891e+30	-- kg 
+local Msun = 1.9891e+30	-- kg
 -- wikipedia:
 --Msun = 1.98847e+30	-- kg
 print('Msun = '..Msun)
@@ -125,7 +125,7 @@ local function alpha_for_r(r)
 end
 
 -- eqn D14 def of sb ... requires b0 which doesn't exist
--- sb(alpha) = b0 + alpha * (b1 + alpha * (b2 + alpha * b3))	
+-- sb(alpha) = b0 + alpha * (b1 + alpha * (b2 + alpha * b3))
 -- but just after D14 in text it says b0 == s0, so we get the eqn D17 def of sb(alpha):
 local function sb_for_alpha_eqn_D_17(alpha)
 	--[[
@@ -143,7 +143,7 @@ local function sb_for_alpha_eqn_D_17(alpha)
 	return sum + s0
 	--]]
 end
-local function dSb_dalpha(alpha) 
+local function dSb_dalpha(alpha)
 	--[[
 	return b1 + 2 * b2 * alpha + 3 * b3 * alpha^2 + 4 * b4 * alpha^3
 	--]]
@@ -158,9 +158,9 @@ local function dSb_dalpha(alpha)
 end
 
 -- eqn D14 def of sd ... requires d0, d1 which doesn't exist
--- sd(alpha) = d0 + alpha * (d1 + alpha * (d2 + alpha * d3))	
+-- sd(alpha) = d0 + alpha * (d1 + alpha * (d2 + alpha * d3))
 -- how is this derived?
-local function sd_for_alpha_eqn_D_17(alpha) 
+local function sd_for_alpha_eqn_D_17(alpha)
 	-- eqn D17 def of sd
 	local dalpha = alphae - alpha
 	--[[
@@ -178,7 +178,7 @@ local function sd_for_alpha_eqn_D_17(alpha)
 	return sum * dalpha + se
 	--]]
 end
-local function dSd_dalpha(alpha) 
+local function dSd_dalpha(alpha)
 	local dalpha = alphae - alpha
 	--[[
 	return se + 2 * d2 * dalpha + 3 * d3 * dalpha^2 + 4 * d4 * dalpha^3
@@ -193,10 +193,10 @@ local function dSd_dalpha(alpha)
 	--]]
 end
 
--- eqn D13 
-local function s_for_alpha_eqn_D_13(alpha) 
+-- eqn D13
+local function s_for_alpha_eqn_D_13(alpha)
 	if alpha <= alpha0 then
-		return sb_for_alpha_eqn_D_17(alpha) 
+		return sb_for_alpha_eqn_D_17(alpha)
 	end
 	if alpha <= alphae then
 		return sd_for_alpha_eqn_D_17(alpha)
@@ -222,7 +222,7 @@ end
 -- eqn D.18.b
 -- evaluate d2 according to the same
 local function d2_eqn_D_18_b()
-	return -1 / (alphae * alphae - alpha0 * alpha0) * ( 
+	return -1 / (alphae * alphae - alpha0 * alpha0) * (
 		se - s0
 		+ range(2,bPolyOrder):mapi(function(i)
 			return (i - 1) * alpha0 ^ i * _G['b'..i]
@@ -233,7 +233,7 @@ local function d2_eqn_D_18_b()
 	)
 end
 
--- equation C.2
+-- eqn C.2
 -- where A, B, R, Z are normalized somehow
 -- I'm not using this one at the moment
 local function phi_for_R_Z_eqn_C_2(R,Z)
@@ -279,14 +279,14 @@ end
 -- for NGC 1560 using eqn D.11 for mu(alpha) this messes up, but using eqn D.8 it works.
 -- for NGC 3198 and 3115 it works for mu(alpha) with eqn D.8
 local function se_eqn_D_20()
-	return math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_8(alphae) - mu0))	
+	return math.log(alphae / alphaeff) / math.log(2 * math.log(10) / 5 * (mu_for_alpha_eqn_D_8(alphae) - mu0))
 end
 
 -- eqn 8.5
 -- basically same as S(alpha) from eqn D13, but with (r, r0, re) swapped with (alpha, alpha0, alphae)
 local function s_for_r_eqn_8_5(r)
 	local alpha = alpha_for_r(r)
-	--[[ 
+	--[[
 	if r <= r0 then
 		return sb_for_alpha_eqn_D_17(alpha)
 	end
@@ -329,7 +329,7 @@ I'm suspicious Fig 2.b uses something like this.
 Especially since Fig 4.a uses a similar trick: use the next section's equation and set Y(r) to 1 ...
 	normrho(r) = Y(r) 10^(-2/5 (mu(r) - mu0))
 	let Y(r) = 1 ...
-	mu(r) = mu0 - 5/(2 log(10)) log(normrho(r)) 
+	mu(r) = mu0 - 5/(2 log(10)) log(normrho(r))
 	looks similar to D.8, if log(normrho(r)) = (alpha / alphaeff) ^ (1 / s(alpha))
 --]]
 local function mu_for_r_eqn_8_4_a(r, normrho)
@@ -339,6 +339,7 @@ end
 --[[
 eqn 8.4b
 ... has both these equations ... and they aren't even equal ... smh
+... also, where's the z?  I can match graphs where z=0, but what about the 3D profile?
 --]]
 local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	--[[ can't do this without s1 and s1 of the galaxy being defined ... which it is not for NGC 3198
@@ -348,21 +349,35 @@ local function normrho_for_r_z_eq_0_eqn_8_4_b(r)
 	-- [[ looks good
 	local alpha = alpha_for_r(r)
 	local s = s_for_alpha_eqn_D_13(alpha)
-	return 
+	return
 		Y_for_r_eqn_8_1(r)
 		* math.exp(-(r / reff) ^ (1 / s))
 	--]]
 end
 
+--[[
+eqn 8.4 is defined as normrho(r,0) = ...
+so what's the equation for normrho(r,z) ?
+I can go back to eqn 6.2 to find:
+rho(r,z) = rho(r,0) * exp(-z^2 / (2 δ(r)^2 ))
+δ(r) = galactic width function ... smh ... complex
+to be fair, I'm not using this anywhere in this script / it isn't used to reconstruct the paper.
+but I will be using this for my initial value problem in my GEM simulation ...
+.. and what about when z > δ(r) ?  or z > √2 δ(r)?  should it evaluate to some minimum epsilon in this case?
+--]]
+local function normrho_for_r_eqn_8_4_b(r, z)
+	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
+	return normrho_for_r_z_eq_0_eqn_8_4_b(r) * math.exp(-z * z / (2 * delta * delta))
+end
 
 --[[
 seems 9.1b is not equal to 9.1a
-eqn 9.1b: 
+eqn 9.1b:
 	normrho(r) = Y(r) * ...
 		... exp( -(r/r0) ^ (1/sb(r)) )	for 0 <= r <= r0
 		... exp( -(r/r0) ^ (1/sd(r)) )	for r0 < r
 looks wrong
-eqn 9.1a: 
+eqn 9.1a:
 	normrho(r) = Y(r) 10^(-2/5 (mu(r) - mu0))
 looks correct ... for mu(r) defined in eqn D.8:
 	mu(r) = mu0 + 5 / (2 * log(10)) * (r / reff) ^ (1 / s(r))
@@ -371,15 +386,15 @@ combining eqn 9.1a (good) with eqn D.8:
 	normrho(r) = Y(r) exp(-(r/reff) ^ (1/s(r)))
 
 now my current eqn D.8 is using the s(r(alpha)) defintiion from eqn D.13:
-	s(alpha) = 
+	s(alpha) =
 		... sb(alpha) 	for 0 <= alpha <= alpha0
 		... sd(alpha) 	for alpha0 < alpha <= alphae
 		... se 			for alphae < alpha
 
 can you spot the difference?
-yup, 
-the good equation uses reff in the denominator 
-the bad equation uses r0 in the denominator 
+yup,
+the good equation uses reff in the denominator
+the bad equation uses r0 in the denominator
 smh, another typo.
 --]]
 local function normrho_for_r_z_eq_0_eqn_9_1_b(r)
@@ -404,7 +419,8 @@ end
 
 -- expressions ... putting all in one place so the symbolic vars will be too
 local normrho_for_r_z_eqn_5_2_b	-- also a candidate for eqn C 9 lhs over lambda
-local normphi_for_r_z_eqn_5_2_a 
+local normphi_for_r_z_eqn_5_2_a	-- also eqn C.7
+local dr_normphi_for_r_z_eqn_5_2_a
 local dz_eqn_6_9_root_expr_based_on_5_2_b
 local eqn_6_9_rhs_over_lambda		-- purely for debugging
 local dr_beta_for_r_beta_f_g_eqn_5_1 		-- dbeta_dr(r, beta, f, g)
@@ -450,7 +466,7 @@ timer("deriving root-finding", function()
 		print('eqn 5.2.a:', normphi_eqn_5_2_a_expr)
 
 		-- this is assuming rs is a point mass, right?  and not distributed?
-		local dr_normphi_eqn_5_2_a_expr = normphi_eqn_5_2_a_expr:diff(r):prune() 
+		local dr_normphi_eqn_5_2_a_expr = normphi_eqn_5_2_a_expr:diff(r):prune()
 		print('∂/∂r of eqn 5.2.a:', dr_normphi_eqn_5_2_a_expr)
 
 		-- eqn 5.2.b
@@ -495,13 +511,13 @@ timer("deriving root-finding", function()
 		print('eqn 5.1 for ∂β/∂r:', dr_beta_eqn_5_1_expr)
 
 --[[ TODO
-		local mu_for_alpha_eqn_D_11_expr = 
+		local mu_for_alpha_eqn_D_11_expr =
 
 		-- eqn D.12
 		local normrho_eqn_D_12_a_expr = 10 ^ (frac(-2, 5) * (mu_for_alpha_eqn_D_11_expr - mu0))
 --]]
 
-		-- eqn C.9 
+		-- eqn C.9
 		-- also eqn 6.9
 		-- also eqn 6.11 is the same when z=0
 		-- uses a normalized density function based on eqn C.4
@@ -520,7 +536,7 @@ timer("deriving root-finding", function()
 		local dz_eqn_6_9_root_expr = eqn_6_9_root_expr_based_on_5_2_b_expr:diff(z):prune()
 		print('∂/∂z eqn 6.9 root using eqn 5.2.b:', dz_eqn_6_9_root_expr)
 		
-		-- assert ∂/∂x rhs == 0, 
+		-- assert ∂/∂x rhs == 0,
 		-- such that if width = width_lhs - width_rhs then d/dz (width) == d/dz (width_lhs)
 		assert(Constant.isValue(eqn_6_9_rhs_over_lambda_expr:diff(z):prune(), 0))
 		
@@ -531,6 +547,8 @@ timer("deriving root-finding", function()
 
 		normphi_for_r_z_eqn_5_2_a = symmath.export.Lua:toFunc{output={normphi_eqn_5_2_a_expr:rhs()}, input=argvars}
 
+		dr_normphi_for_r_z_eqn_5_2_a = symmath.export.Lua:toFunc{output={dr_normphi_eqn_5_2_a_expr:rhs()}, input=argvars}
+
 		eqn_6_9_rhs_over_lambda = symmath.export.Lua:toFunc{output={eqn_6_9_rhs_over_lambda_expr}, input=argvars}
 		
 		dz_eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_6_9_root_expr}, input=argvars}
@@ -540,7 +558,7 @@ timer("deriving root-finding", function()
 		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
 		
 		g_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={g_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
-	end	
+	end
 end)
 
 local function normrho_for_r_z_eq_0_eqn_5_2_b(r)
@@ -565,7 +583,7 @@ local function galacticWidth_newton_f_rhs(r, z)
 end
 
 -- f = eqn 5.2b - exp(-l^2/2)
-local function galacticWidth_newton_f_root_based_on_eqn_5_2_b(z, r) 
+local function galacticWidth_newton_f_root_based_on_eqn_5_2_b(z, r)
 	return galacticWidth_newton_f_lhs_based_on_eqn_5_2_b(r, z) - galacticWidth_newton_f_rhs(r, z)
 end
 	
@@ -587,7 +605,7 @@ local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
 	--[[ I think the function generation is screwing up, esp for df/dz ...
 	return newtonRootFind(
 		galacticWidth_newton_f_root_based_on_eqn_5_2_b,
-		galacticWidth_newton_df_dz_based_on_eqn_5_2_b, 
+		galacticWidth_newton_df_dz_based_on_eqn_5_2_b,
 		1, r)
 	--]]
 	-- [[ looks good, faster than newton, but how do you determine deltamax?
@@ -595,8 +613,8 @@ local function galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b(r)
 	--]]
 end
 
--- all the galaxy width functions seem to be dependent on normrho(r,z) eqn 5.2.b ... but that is specific to spheroids ... 
--- I'm surprised these graphs don't only work for the normrho(r,z) defined elsewhere, like 8.4.a 
+-- all the galaxy width functions seem to be dependent on normrho(r,z) eqn 5.2.b ... but that is specific to spheroids ...
+-- I'm surprised these graphs don't only work for the normrho(r,z) defined elsewhere, like 8.4.a
 local function makeGalaxyWidthGraphs(figname, name)
 	local rvec = xvec * rmax
 	timer('plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b', function()
@@ -628,19 +646,19 @@ local sqrt_2 = math.sqrt(2)
 
 -- eqn C.17
 -- normphi(r,0) is based on normrho(r,0)
-local function normphi_for_r_z_eq_0_eqn_C_17(r)
-	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
-
+local function normphi_for_r_z_eq_0_eqn_C_17(r, normrho)
 	-- normrho -- normalized density
 	-- NGC 3198 uses eqn 8.4a
 	-- NGC 3115 shows 8.4a == 8.4b == 9.1b
-	local normrho = normrho_for_r_z_eq_0_eqn_8_4_a
+	normrho = normrho or normrho_for_r_z_eq_0_eqn_8_4_a
+	
+	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
 
 	local mmin = mmin_for_r_eqn_6_7(r)
 
 	-- eqn C.17:
 	local normphi =
-		-(sqrt_2 / sqrt_pi) * (3/2) * lambda * rs * r * 
+		-(sqrt_2 / sqrt_pi) * (3/2) * lambda * rs * r *
 			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
 				return
@@ -652,7 +670,7 @@ local function normphi_for_r_z_eq_0_eqn_C_17(r)
 		-(sqrt_2 / sqrt_pi) * (3/2) * lambda * rs * r
 			* integrate(function(m)
 				local tmp = (2 - m + 2 * math.sqrt(1 - m)) / m
-				return 
+				return
 					K(m) / (2 * math.sqrt(m * (1 - m)))
 					* tmp^(3/2)
 					* delta(tmp * r)
@@ -663,12 +681,12 @@ print(r, mmin, normphi)
 end
 
 -- eqn C.18
-local function dr_normphi_for_r_z_eq_0_eqn_C_18(r)
+local function dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrho)
+	normrho = normrho or normrho_for_r_z_eq_0_eqn_8_4_a
 	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
-	local normrho = normrho_for_r_z_eq_0_eqn_8_4_a
 	local mmin = mmin_for_r_eqn_6_7(r)
-	local dr_normphi = 
-		1 / (sqrt_2 * sqrt_pi) * (3/2 * lambda * rs) * 
+	local dr_normphi =
+		1 / (sqrt_2 * sqrt_pi) * (3/2 * lambda * rs) *
 			integrate(function(m)
 				local tmp = (2 - m - 2 * math.sqrt(1 - m)) / m
 				return
@@ -708,9 +726,9 @@ it never says implicit/explicit/whatever type of integration.
 it looks like they use explicit integration to solve this
 i'm guessing they explicit integrated it forwards and backwards.
 
-so this makes the smooth graphs of a spheroid rotation curve.  
+so this makes the smooth graphs of a spheroid rotation curve.
 
-how to get the bumpy ones? 
+how to get the bumpy ones?
 maybe replace the rho and phi with the bumpy ones, and re-derive the Abel function?
 yes, sure enough, (down at the Fig__4b graphs) they replace the f(r) and g(r)
 
@@ -746,10 +764,11 @@ rk2alpha	good	bad				bad
 rk4			bad		bad				bad
 rkf45		good	bad		bad		bad
 --]]
-local function makeRotationCurve(dr_beta_fun, rL, rR)
+local function makeRotationCurve(dr_beta_fun, rL, rR, n)
 	local r = lbeta
 	local beta = beta_at_lbeta
-	local n = 1000			-- make 1000 points
+	--n = n or 1000		-- float128 needs 1000 points (or maybe less)
+	n = n or 2000 		-- float64 needs 2000 ... but runs muuuch faster
 	local dr = (rR - rL) / n
 	local rAndBetaVec = table()
 --print('dr', dr, 'r', r, 'beta', beta)
@@ -775,7 +794,7 @@ print('r='..r..' β='..beta..' ∂β/∂r='..((beta - oldbeta) / dr))
 		rAndBetaVec:insert{r, beta}
 	end
 --]=]
-	rAndBetaVec:sort(function(a,b) return a[1] < b[1] end) 
+	rAndBetaVec:sort(function(a,b) return a[1] < b[1] end)
 
 	local rvec, betavec = matrix(rAndBetaVec):T():unpack()
 	return rvec, betavec
@@ -783,7 +802,7 @@ end
 
 -- eqn D11:
 -- depends on s1, s2, which we only have for NGC 1560 (right?)
-local function mu_for_alpha_eqn_D_11(alpha) 
+local function mu_for_alpha_eqn_D_11(alpha)
 	return mu0 + (
 		alpha < alpha0
 		and 5 / (2 * math.log(10)) * (alpha / alpha1) ^ (1 / s1)
@@ -800,12 +819,12 @@ end
 -- depends upon s1 and s2 to be defined
 -- and those are only defined for NGC 1560 in Appendix D
 -- why are the labeled equations combining two equations into one?  how do you denote them?
-local function normrho_for_r_z_eq_0_eqn_D_12_a(r) 
+local function normrho_for_r_z_eq_0_eqn_D_12_a(r)
 	local alpha = alpha_for_r(r)
 	local mu = mu_for_alpha_eqn_D_11(alpha)
 	return normrho_for_mu_eqn_D_12_a(mu)
 end
-local function normrho_for_r_z_eq_0_eqn_D_12_b(r) 
+local function normrho_for_r_z_eq_0_eqn_D_12_b(r)
 	if r <= r0 then
 		return math.exp(-(r / r1) ^ (1 / s1))
 	end
@@ -837,7 +856,7 @@ local function g_eqn_4_12_b(r, dr_normphi)
 	return r * dr_normphi
 end
 
--- f from eqn 4.12a with normrho from ... 
+-- f from eqn 4.12a with normrho from ...
 local function f_for_r_eqn_4_12_a(r)
 	--local normrho = normrho_for_r_z_eq_0_eqn_5_2_b(r)
 	local normrho = normrho_for_r_z_eq_0_eqn_8_4_b(r)
@@ -846,7 +865,13 @@ local function f_for_r_eqn_4_12_a(r)
 	return f_eqn_4_12_a(r, normrho)
 end
 
--- g from eqn 4.12b with dr_normphi from eqn C.18
+--[[
+g from eqn 4.12b with dr_normphi from eqn C.18
+I think an incorrect d/dr normphi is all that's killing Fig 4.b
+which is dependent on this definition,
+which has an equation within the paragraph to deduce normrho
+but has no such equation to deduce normphi ...
+--]]
 local function g_for_r_eqn_4_12_b(r)
 	local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r)
 	return g_eqn_4_12_b(r, dr_normphi)
@@ -869,7 +894,7 @@ end
 -- TODO eqn 4.14 .a=.b:
 -- beta^2 = r d/dr normphi(r,0)
 
--- TODO eqn 4.15 
+-- TODO eqn 4.15
 -- dbeta/dr = sqrt( f(r) (1 - beta^2) / r )
 local function dr_beta_for_r_beta_eqn_4_15(r, beta, f)
 	return math.sqrt(f * (1 - beta * beta) / r)
@@ -879,16 +904,16 @@ end
 -- (beta^2 + g(r)) r (dbeta/dr)^2 = 2 (1 - f(r)) * beta^4 + 2 (f(r) - g(r)) beta^2
 -- dbeta/dr = beta sqrt( (2 (1 - f(r)) * beta^2 + 2 (f(r) - g(r))) / (r (beta^2 + g(r))) )
 local function dr_beta_for_r_beta_f_g_eqn_4_13(r, beta, f, g)
-	return math.sqrt( 
-		(2 * (1 - f) * beta^4 + 2 * (f - g) * beta^2) 
-		/ (r * (beta^2 + g)) 
+	return math.sqrt(
+		(2 * (1 - f) * beta^4 + 2 * (f - g) * beta^2)
+		/ (r * (beta^2 + g))
 	)
 end
 
 -- not used.  looks bad when used for plotting Fig 3.b
-local function S_eqn_D_19(alpha) 
-	return math.log(alpha / alphaeff) 
-		/ math.log(2 / 5 * math.log(10) * (mu_for_alpha_eqn_D_11(alpha) - mu0))	
+local function S_eqn_D_19(alpha)
+	return math.log(alpha / alphaeff)
+		/ math.log(2 / 5 * math.log(10) * (mu_for_alpha_eqn_D_11(alpha) - mu0))
 end
 
 
@@ -901,7 +926,7 @@ local R0_in_m = R0_in_kpc * 1000 * m_in_pc
 -- eqn 4.9.a
 -- also eqn C.8
 -- rs = 2 * G * M / (c^2 * R0)
--- notice, typically the Schwarzschild radius rs is defined as rs = 2 M * G / c^2 ... 
+-- notice, typically the Schwarzschild radius rs is defined as rs = 2 M * G / c^2 ...
 -- ... so where does this R0 come into play?
 local function rs_eqn_4_9_a()
 	return 2 * G_over_c2_in_m_per_kg * M / R0_in_m
@@ -918,8 +943,8 @@ end
 
 
 
---[[ 
-text after eqn 4.5: 
+--[[
+text after eqn 4.5:
 beta = v(R,0) / c
 R0 = 1 kpc
 r = R / R0
@@ -1140,7 +1165,7 @@ local _1992_Broeils_table_4 = table{
 
 -- SOOOOO
 -- shitty paper
--- it never specifies to treat Y(r) = 1 for NGC 1560 ... 
+-- it never specifies to treat Y(r) = 1 for NGC 1560 ...
 -- ... and it doesn't even mention the Y(r) equations until after, in the NGC 3198 and NGC 3115 sections
 -- (eqn 8.4a, 8.4b, 9.1b ...)
 -- buuut some graphs only work correctly if you use this later function and this substitution
@@ -1168,7 +1193,7 @@ rho0 = 3.31e-20				-- kg/m^3
 lambda = lambda_eqn_4_9_b()	-- lambda = 0.028053610392694
 --]]
 
--- defined in Appendix D text after eqn D.11 ... but used for NGC 1560 graphs in section 6 graphs ... smh 
+-- defined in Appendix D text after eqn D.11 ... but used for NGC 1560 graphs in section 6 graphs ... smh
 d = 3.0 * 1000 -- kpc
 
 
@@ -1176,10 +1201,13 @@ local alpha_in_arcsec_1992_Broeils_table_4, v_in_km_per_s_1992_Broeils, v_corr_i
 local r_in_kpc_1992_Broeils_table_4 = alpha_in_arcsec_1992_Broeils_table_4:map(r_for_alpha)
 local beta_corr_1992_Broeils = v_corr_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s
 
+-- random fact: this works in 128-bit but not in 64-bit.
+-- chances are the author didn't use 128-bit, so if you're using 64-bit, better pick a smaller step size
 if calcRotCurveGraphs then
 	local rvec, betavec = makeRotationCurve(function(r, beta)
 			return dr_beta_for_r_beta_f_g_eqn_5_1(r, beta, f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r))
-		end, 0, lbeta)
+		end, 0, lbeta,
+		2000)
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig__1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
@@ -1192,7 +1220,7 @@ if calcRotCurveGraphs then
 		data = {
 			rvec,
 			betavec,
-			r_in_kpc_1992_Broeils_table_4, 
+			r_in_kpc_1992_Broeils_table_4,
 			beta_corr_1992_Broeils
 		},
 		key = 'bottom right',
@@ -1214,7 +1242,7 @@ if calcRotCurveGraphs then
 			rvec,
 			rvec:map(beta_circ_for_r_eqn_4_14_using_eqn_5_3),
 			betavec,
-			r_in_kpc_1992_Broeils_table_4, 
+			r_in_kpc_1992_Broeils_table_4,
 			beta_corr_1992_Broeils
 			--v_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s,
 		},
@@ -1296,8 +1324,8 @@ gnuplot{
 		alpha_in_arcsec_1992_Broeils_table_3,
 		luminosity_1992_Broeils,
 	},
-	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 
 -- -- section 7 1st paragraph:
@@ -1339,11 +1367,11 @@ d2_check = d2_eqn_D_18_b()		-- d2_check = -3.2067929248811e-06 vs -3.22e-6 ... c
 
 --[[
 ok going over coefficients / polynomials / constraints in Appendix D, eqns D14-D18 ...
-from eqn D14 to eqn D17, they go from using 
+from eqn D14 to eqn D17, they go from using
 	sd(alpha) = sum j=0..m d[j] * alpha^j	<- eqn D14
 to using
 	sd(alpha) = sum j=0..m d[j] * (alphae - alpha)^j	<- eqn D17
-... but ... 
+... but ...
 the d's of D14 will not match the d's of D17.
 unless we were remapping only d0 or d1, as the paper does using the constraints:
 	sb(alpha0) = sd(alpha0),
@@ -1365,8 +1393,8 @@ but compared to Fig 2b ...
 fig 2b subtext: "maximum radial distance 5.13 kpc" which happens to match lrho for NGC 1560 ...
 but the graphs extend beyond r=8 ...
 FAIL - what's the rmax of this?  shape doesn't look right either ...
-why is it μ_B? what does the "B" mean? "Broeils"?  No, that's just the sampled data, 
- while this is the y axis label, applying also to the 2021 Ludwig graph ... 
+why is it μ_B? what does the "B" mean? "Broeils"?  No, that's just the sampled data,
+ while this is the y axis label, applying also to the 2021 Ludwig graph ...
 
 is there ever any relation between mu(r) and rho(r) in general?
 or do we always only ever have to use predefined mu(r) functions? how are these even generated?
@@ -1399,7 +1427,7 @@ gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__2b_NGC_1560_luminosity_eqn_D11_using_section_7_numbers.svg",
 	xlabel = "α (arcsec)",
-	ylabel = "μ_B (mag arcsec^-2)",	
+	ylabel = "μ_B (mag arcsec^-2)",
 	style = 'data lines',
 	title = "Luminosity profile of NGC 1560",
 	--xrange = {rvec[1], rvec[#rvec]},	-- graph goes to 6.4, xrange goes to 8 ... hmm ...
@@ -1409,16 +1437,20 @@ gnuplot{
 		rvec,
 		rvec:size():lambda(function(i)
 			local r = rvec[i]
-			-- ok here we have normrho from eqn 5.2b, used in figure 1.b
+			--[[
+			-- NOTICE to get this to work,
+			-- here we have normrho from eqn 5.2b, used in figure 1.b
 			-- and that normrho inserted into eqn 8.4a solved for mu(r) in terms of normrho
+			-- I don't think this equation is anywhere in the paper.
+			--]]
 			local normrho = normrhovec[i]
 			return mu_for_r_eqn_8_4_a(r, normrho)
 		end),
 		r_in_kpc_1992_Broeils_table_3,
 		luminosity_1992_Broeils,
 	},
-	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1992 Broeils', with='points pointtype 7'}, 
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
 -- CHECK
 
@@ -1475,7 +1507,7 @@ b = 0.567		-- kpc
 alphamax = alpha_for_r(rmax)
 -- alphamax = 838.81021207153
 -- hmm, not the NGC 1560 graph alphamax for sure ... which is around 350
--- instead it turns out the alpha (arcsec) associated with the distance of lrho = 5.13 kpc , 
+-- instead it turns out the alpha (arcsec) associated with the distance of lrho = 5.13 kpc ,
 -- which is the furthest distance specified in the figure 3 subtext.
 
 rmax_check = rmax_eqn_C_15()	-- rmax_check = 12.2202643935 vs 12.2 ... close
@@ -1493,8 +1525,8 @@ if calcGravPotGraphs then
 		data = {
 			rvec,
 			--rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
-			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
-			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
+			rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end),	-- CLOSE
+			rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end),	--
 		},
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
@@ -1512,7 +1544,7 @@ R0_in_m_check = (3 * M * lambda / (4 * math.pi * rho0)) ^ (1/3) 	-- m	-- R0_in_m
 R0_in_kpc_check = R0_in_m_check / m_in_pc / 1000	-- kpc	-- R0_in_kpc_check = 9.98187794103888e-01 kpc vs 1 kpc ... close
 -- looks close compared to the paper's stated R0 = 1 kpc
 
-rs_check = rs_eqn_4_9_a()			-- rs_check = 1.4551710314407e-06 vs 1.46e-6 ... close 
+rs_check = rs_eqn_4_9_a()			-- rs_check = 1.4551710314407e-06 vs 1.46e-6 ... close
 lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.13473115517544 vs 0.134 ... close
 
 -- Appendix D, after eqn D12
@@ -1537,7 +1569,7 @@ gnuplot{
 	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
 	{using='1:2', title=''},
 }
--- CHECK 
+-- CHECK
 -- has a bump at alphaeff that can be fixed by re-deriving the b1, d1, d2 coeffs, just like NGC 3198
 
 
@@ -1552,10 +1584,12 @@ does that mean the curve uses another eqn for rho?
 --]]
 -- [[
 local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(normrho_for_mu_eqn_D_12_a)
-normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1] 
+normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1]
 --]]
 
 local rvec = makePow10Range(.01, rmax)
+--local normrhovec = rvec:map(normrho_for_r_NGC_1560)		-- works, but isn't provided in the paper
+local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)	-- works if YOrder = -1
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg",
@@ -1566,8 +1600,7 @@ gnuplot{
 	log = 'x',
 	data = {
 		rvec,
-		--rvec:map(normrho_for_r_NGC_1560),			-- works, but isn't provided in the paper
-		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),	-- works if YOrder = -1
+		normrhovec,
 		r_in_kpc_1992_Broeils_table_3,
 		normrho_for_lum_1992_Broeils,
 	},
@@ -1576,8 +1609,25 @@ gnuplot{
 }
 -- CHECK
 
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig__4a_derived_NGC_1560_density.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ (kg/m^3)",
+	style = 'data lines',
+	title = 'Density of NGC 1560',
+	log = 'x',
+	data = {
+		rvec,
+		normrhovec * rho0,
+		r_in_kpc_1992_Broeils_table_3,
+		normrho_for_lum_1992_Broeils * rho0,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
+}
 
--- TODO CAN'T DO THIS UNTIL YOU FIX NORMRHO!
+
 --[[
 Section 7 text beneath Fig 4:
 	
@@ -1588,26 +1638,38 @@ Section 7 text beneath Fig 4:
 	∂φ(r, 0)/∂r and used to determine both the functions f(r)
 	and g(r) in Abel’s equation (5.1).
 
-and then you look at C.18, and just give up all hope. 
+and then you look at C.18, and just give up all hope.
 --]]
 -- [[
 if calcRotCurveGraphs then
 	-- [[ this worked for figure 1 ... but no other figures
+	-- the function looks like it is based on S(alpha) of Fig 3.b
 	local rvec, betavec = makeRotationCurve(
 		function(r, beta)
+
+			--local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			--local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			--local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+
+			local normrho = normrhofunc(r)
+			
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			--local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			
 			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
 			--return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
-			--return dr_beta_for_r_beta_eqn_4_15(r, beta, 	-- doesn't integrate across the full domain.  negative just flips it, still fails. 
-				r, beta, 
+			--return dr_beta_for_r_beta_eqn_4_15(r, beta, 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
 				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
-				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r)
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
 			)
 		end,
 		0, rmax)
 	--]]
 	--[[
 	local rvec = xvec * rmax
-	local betavec = 
+	local betavec =
 	--]]
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
@@ -1645,7 +1707,7 @@ NGC 3198
 
 ]]
 
--- column 1 is in arcsec, 
+-- column 1 is in arcsec,
 -- column 2 is major mu in mag/arcsec^2
 -- column 2 is minor mu in mag/arcsec^2
 local _1987_Kent_table_2 = table{
@@ -1718,7 +1780,7 @@ local _1989_Begeman_table_2 = table{
 	{11.0,	149},
 }
 
--- Alright, after enough nonsense and contradictions, and being split between two sections (Section 7 and Appendix D) that have contradicting information, 
+-- Alright, after enough nonsense and contradictions, and being split between two sections (Section 7 and Appendix D) that have contradicting information,
 -- lets try starting fresh with Section 8, NGC 3198 ...
 --
 -- "The analysis of the spiral galaxy NGC 3198 [11,34,35] follows the same procedure established for NGC 1560"
@@ -1748,7 +1810,7 @@ dPolyOrder = 8
 
 -- parenthesis (derived)
 -- if alphae is the alpha of lrho, why don't they call it l_e? or alpha_rho? or anything else to connect the two? gah
-alphae = 316.8		
+alphae = 316.8
 se = 1.49
 b1 = 0.0499
 d2 = 0.0000181
@@ -1771,7 +1833,7 @@ gammai = gamma0	-- is this a ... function or a constant? is ri and yi functions 
 y0 = 8.0
 v = 1.4
 
--- where did I get this from? 
+-- where did I get this from?
 -- somewhere near eqn 8.1 and "This population is tentatively represented by a function Y defined by a sum of n + 1 Lorentzian (Cauchy) distributions"
 -- but where does it say "n=3" for NGC 3198?
 -- either way, this corresponds to the number of peaks in the curves, and for NGC 3198 it has 4 peaks
@@ -1800,7 +1862,7 @@ M = 1.25e+11 * Msun	-- kg - total mass of galaxy
 rho0 = 6.54e-21		-- kg/m^3 - central density
 Upsilon = 6.50 * UpsilonSun	-- kg/W ? ... total mass-to-light ratio
 
-alphamax = alpha_for_r(rmax)	
+alphamax = alpha_for_r(rmax)
 -- alphamax = 688.29669041151
 -- but these graphs end at about alpha=315 ...
 
@@ -1821,7 +1883,7 @@ lbeta = 29.4	-- kpc
 -- I'm pretty sure the answer is because the other two galaxies have fully different variable labels, which smh why....
 lrho_check = r_for_alpha(alphae)	-- lrho_check = 14.130185624146 vs 14.1 ... close
 
-rs_check = rs_eqn_4_9_a()			-- rs_check = 1.1966867034874e-05 vs 1.20e-5 ... check 
+rs_check = rs_eqn_4_9_a()			-- rs_check = 1.1966867034874e-05 vs 1.20e-5 ... check
 lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.0032370645736991 vs 0.00323 ... check
 rmax_check = rmax_eqn_C_15()		-- rmax_check = 30.72128372004 vs 30.7 ... close
 
@@ -1842,8 +1904,8 @@ gnuplot{
 		alpha_in_arcsec_1987_Kent_table_2,
 		luminosity_1987_Kent_table_2,
 	},
-	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1987 Kent', with='points pointtype 7'}, 
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Kent', with='points pointtype 7'},
 }
 -- CHECK.  good.
 -- though there is a hiccup in the sd->sb transition at alpha0
@@ -1858,7 +1920,7 @@ gnuplot{
 	title = "Sersic index of NGC 3198",
 	xrange = {0, alphae},
 	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
-	{using='1:2', title=''}, 
+	{using='1:2', title=''},
 }
 -- CHECK.  good.
 
@@ -1872,6 +1934,7 @@ local normrho_1987_Kent_table_2 = rho_1987_Kent_table_2 / rho_1987_Kent_table_2[
 -- so looks like this mass density graph uses lrho as the rmax instead of rmax (like I think figure 3 used)
 -- TODO what does this look like with normrho 8.4a?
 local rvec = makePow10Range(.1, lrho)
+local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__7a_NGC_3198_normalized_mass_density_eqn_5.2b.svg",
@@ -1884,16 +1947,36 @@ gnuplot{
 	yrange = {.002, 2},
 	data = {
 		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),
+		normrhovec,
 		r_in_kpc_1987_Kent_table_2,
 		normrho_1987_Kent_table_2,
 	},
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1987 Kent', with='points pointtype 7'},
 }
+-- CHECK except for I'm missing any kind of curve through the data points
+
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig__7a_derived_NGC_3198_density.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ (kg/m^3)",
+	style = 'data lines',
+	title = 'Density of NGC 3198',
+	log = 'xy',
+	xrange = {.1, lrho},
+	data = {
+		rvec,
+		normrhovec * rho0,
+		r_in_kpc_1987_Kent_table_2,
+		normrho_1987_Kent_table_2 * rho0,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Kent', with='points pointtype 7'},
+}
 
 --[[
-Trying to reproduce the rotation curve data points for NGC 3198. 
+Trying to reproduce the rotation curve data points for NGC 3198.
 The paper says they are from 1989 Begeman
 I see his figure 2, whose radial distance is in arcminutes
 The last entry is alpha = 11.0 arcminutes.
@@ -1928,7 +2011,7 @@ of eqn 3.17 and 4.14: d/dr normphi(r) = sqrt(g(r))/r
 
 end of Section 7:
 	f(r) is directly proportional to ϱ(r) and
-	g(r) depends on the integral of ϱ(r), so that these two contributions 
+	g(r) depends on the integral of ϱ(r), so that these two contributions
 	are not in phase and impact differently the rotation velocity.
 
 So can I use ϱ(r) to get f(r)?
@@ -1964,9 +2047,9 @@ if calcRotCurveGraphs then
 	-- well at least the 1989 Begeman paper looks correct
 	local rvec, betavec = makeRotationCurve(function(r, beta)
 			return dr_beta_for_r_beta_f_g_eqn_5_1(
-				r, beta, 
+				r, beta,
 				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
-				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r) 
+				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r)
 			)
 		end,
 		0, rmax)
@@ -2018,7 +2101,7 @@ so I think that means I should use the circular velocity profile,
 from eqn 3.17 and 4.14, which says beta(r) = sqrt(g(r)) = sqrt(r d/dr normphi(r))
 which would mean that d/dr normphi(r) = sqrt(g(r))/r
 ... for ... i'm guessing ... g(r) being the circular velocity profile, in eqn 5.3 (as eqn 4.14 and eqn 3.17 use)?
---]]	
+--]]
 local dr_normphi_vec = rvec:map(function(r)
 	return dr_normphi_for_r_g_eqn_4_14(r, g_for_r_eqn_5_3(r))
 end)
@@ -2033,8 +2116,8 @@ if calcGravPotGraphs then	-- because it's so slow
 		title = 'Gravitational potential of NGC 3198',
 		data = {
 			rvec,
-			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),	-- CLOSE
-			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),	--
+			rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end),	-- CLOSE
+			rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end),	--
 		},
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
@@ -2103,7 +2186,7 @@ gnuplot{
 	title = 'Normalized rotation curve of NGC 3198',
 	xrange = {0, rmax},
 	data = {
-		rvec, 
+		rvec,
 		rvec:map(v_for_r) / c_in_m_per_s,
 		r_in_kpc_1989_Begeman,
 		beta_1989_Begeman,
@@ -2211,7 +2294,7 @@ local _1987_Capaccioli_et_al_table_9 = table{
 -- col 1 is radial dist in arcsec
 -- col 2 is the number of samples
 -- col 3 is velocity in km/s relative to the sun
--- col 4 is velocity error range in km/s 
+-- col 4 is velocity error range in km/s
 -- col 5 is the velocity relative to NGC 3114
 local _1980_Rubin_et_al_table_2 = table{
 	-- NE data:
@@ -2295,8 +2378,8 @@ md = 8.08
 kspiral = 0.16	-- kpc?
 rspiral = 1.0	-- kpc
 gamma0 = 0.4
--- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115 
--- section 8 says "gamma0 = gammai = ...", section 9 says "gamma0 = 0.4" 
+-- eqn 9.1 or 8.4 depends on Y(r), which depends on gammai ... which isn't defined for NGC 3115
+-- section 8 says "gamma0 = gammai = ...", section 9 says "gamma0 = 0.4"
 -- ... did section 9 mean to imply that "gammai = gamm0" still / always / for NGC 3115 as well?
 gammai = gamma0
 
@@ -2307,9 +2390,9 @@ gammai = gamma0
 y0 = 4.0
 -- I'm guessing this can be validated with some least-squares calculations but meh, I'm not going to do it.  I'm doing enough work as it is.
 
-v = 0.3	-- v? nu? upsilon? 
+v = 0.3	-- v? nu? upsilon?
 
--- Section 9, just before eqn 9.1: "These current rings can be represented taking two terms (i = 0, 1) in Eq. (8.1)." 
+-- Section 9, just before eqn 9.1: "These current rings can be represented taking two terms (i = 0, 1) in Eq. (8.1)."
 -- Likewise if you set this to 4 then you get extra peaks that shouldn't be there.
 YOrder = 1
 
@@ -2368,8 +2451,8 @@ gnuplot{
 		alpha_in_arcsec_1987_Capaccioli_et_al_table_9,
 		luminosity_1987_Capaccioli_et_al_table_9,
 	},
-	{using='1:2', title='2021 Ludwig'}, 
-	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'}, 
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
 }
 -- CHECK
 
@@ -2385,7 +2468,7 @@ gnuplot{
 	yrange = {0, 2.5},
 	log = 'x',
 	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
-	{using='1:2', title=''}, 
+	{using='1:2', title=''},
 }
 -- CHECK
 
@@ -2398,6 +2481,7 @@ local normrho_1987_Capaccioli_et_al_table_9 = rho_1987_Capaccioli_et_al_table_9 
 -- two graph contestants for the normalized mass density, each with their own set of problems:
 
 local rvec = makePow10Range(.01, lrho)
+local normrho = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
 
 --[[ CHECK
 with paper's "y0 = 0.4" this is a FAIL ...
@@ -2411,16 +2495,36 @@ gnuplot{
 	xlabel = "r (kpc)",
 	ylabel = "ρ / ρ0",
 	style = 'data lines',
-	title = 'Normalized mass density of NGC 3115 (eqn 8.4b)',
+	title = 'Normalized mass density of NGC 3115',
 	log = 'xy',
 	xrange = {rvec[1], rvec[#rvec]},
 	--yrange = {1e-6, 1},
 	format = {y = '%.2e'},
 	data = {
 		rvec,
-		rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b),
+		normrho,
 		r_in_kpc_1987_Capaccioli_et_al_table_9,
 		normrho_1987_Capaccioli_et_al_table_9,
+	},
+	{using='1:2', title='2021 Ludwig'},
+	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
+}
+
+gnuplot{
+	terminal = 'svg size 1024,768 background rgb "white"',
+	output = "Fig_10a_derived_NGC_3115_density.svg",
+	xlabel = "r (kpc)",
+	ylabel = "ρ (kg/m^3)",
+	style = 'data lines',
+	title = 'Density of NGC 3115',
+	log = 'xy',
+	xrange = {rvec[1], rvec[#rvec]},
+	format = {y = '%.2e'},
+	data = {
+		rvec,
+		normrho * rho0,
+		r_in_kpc_1987_Capaccioli_et_al_table_9,
+		normrho_1987_Capaccioli_et_al_table_9 * rho0,
 	},
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1987 Capaccioli et al', with='points pointtype 7'},
@@ -2454,7 +2558,7 @@ gnuplot{
 -- THIS FAILS WITH THE INCORRECT EQUATION IN 9.1b
 -- unless of course I assumed wrong about how to fix 9.1a -- THEN IT WORKS
 -- either way, now it looks right, now that I replaced the 9.1b denominator of r0 with reff  (and added a final piecewise boundary for s(r) = se)
--- wrong yrange, but right peaks 
+-- wrong yrange, but right peaks
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig_10a_NGC_3115_normalized_mass_density_eqn_9.1b.svg",
@@ -2499,8 +2603,8 @@ if calcGravPotGraphs then	-- because it's so slow
 		title = 'Gravitational potential of NGC 3115',
 		data = {
 			rvec,
-			rvec:map(normphi_for_r_z_eq_0_eqn_C_17),
-			rvec:map(dr_normphi_for_r_z_eq_0_eqn_C_18),
+			rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end),
+			rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end),
 		},
 		{using='1:2', title='normphi'},
 		{using='1:3', title='d/dr normphi'},
@@ -2512,7 +2616,7 @@ if calcRotCurveGraphs then
 	local rvec = xvec * lbeta
 	local rvec, betavec = makeRotationCurve(function(r, beta)
 			return dr_beta_for_r_beta_f_g_eqn_5_1(
-				r, beta, 
+				r, beta,
 				--f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
 				f_for_r_eqn_4_12_a(r), g_for_r_eqn_4_12_b(r)
 			)
@@ -2565,7 +2669,7 @@ gnuplot{
 }
 
 -- normalized rotation curve with small increase in rs
-if calcRotCurveGraphs then	
+if calcRotCurveGraphs then
 	local rvec = xvec * lbeta
 	local rvec, betavec = makeRotationCurve(function(r, beta)
 			return dr_beta_for_r_beta_f_g_eqn_5_1(
