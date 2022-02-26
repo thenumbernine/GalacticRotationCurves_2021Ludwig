@@ -446,7 +446,7 @@ timer("deriving root-finding", function()
 		local mu0 = var'mu0'
 	
 
-		local beta = var('beta', {r})
+		local beta = var('β', {r})
 		local f = var('f', {r})
 		local g = var('g', {r})
 		local rs = var'rs'
@@ -494,10 +494,10 @@ timer("deriving root-finding", function()
 		print('g for eqn 4.12b:', g_eqn_4_12_b_expr)
 
 		local f_z_eq_0_eqn_5_3_expr = f_eqn_4_12_a_expr:subst(normrho_eqn_5_2_b_expr, z:eq(0))()
-		print('f(r,z=0) for eqn 5.3 with normrho eqn 5.2b:', f_z_eq_0_eqn_5_3_expr)
+		print('f(r,z=0) for eqn 5.3 with ϱ eqn 5.2b:', f_z_eq_0_eqn_5_3_expr)
 		
 		local g_z_eq_0_eqn_5_3_expr = g_eqn_4_12_b_expr:subst(normphi_eqn_5_2_a_expr, z:eq(0))()
-		print('g(r,z=0) for eqn 5.3 with normphi eqn 5.2a:', g_z_eq_0_eqn_5_3_expr)
+		print('g(r,z=0) for eqn 5.3 with φ eqn 5.2a:', g_z_eq_0_eqn_5_3_expr)
 
 		
 		-- solving eqn 5.1 for dbeta/dr, but preserving f(r) and g(r) instead of analytically simplifying their replacement in, like eqn 5.3 does ...
@@ -586,7 +586,7 @@ end
 local function galacticWidth_newton_f_root_based_on_eqn_5_2_b(z, r)
 	return galacticWidth_newton_f_lhs_based_on_eqn_5_2_b(r, z) - galacticWidth_newton_f_rhs(r, z)
 end
-	
+
 -- df/dz = d/dz (eqn 5.2b)
 local function galacticWidth_newton_df_dz_based_on_eqn_5_2_b(z, r)
 	return dz_eqn_6_9_root_expr_based_on_5_2_b(r, z)
@@ -617,7 +617,17 @@ end
 -- I'm surprised these graphs don't only work for the normrho(r,z) defined elsewhere, like 8.4.a
 local function makeGalaxyWidthGraphs(figname, name)
 	local rvec = xvec * rmax
+	--[[ times:
+	plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b...
+	...done plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b (0.053118s)
+	plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b...
+	...done plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b (0.052943s)
+	plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b...
+	...done plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b (0.058467s)
+	--]]
 	timer('plotting galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b', function()
+		local deltavec = rvec:map(galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b)
+		-- TODO HERE - generate a curve approximation to this vector
 		gnuplot{
 			terminal = 'svg size 1024,768 background rgb "white"',
 			output = figname.."_NGC_"..name.."_galactic_width_eqn_C9.svg",
@@ -625,11 +635,47 @@ local function makeGalaxyWidthGraphs(figname, name)
 			xlabel = "r (kpc)",
 			ylabel = "δ (kpc)",
 			title = "Galactic width of NGC "..name,
-			data = {rvec, rvec:map(galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b)},
+			data = {rvec, deltavec},
 			{using='1:2', title=''},
+			-- save data so I can mess with possible fitting of delta(r) ... 
+			savedata = figname.."_NGC_"..name.."_galactic_width_eqn_C9.txt",
 		}
 	end)
 end
+
+
+-- eqn D11:
+-- depends on s1, s2, which we only have for NGC 1560 (right?)
+local function mu_for_alpha_eqn_D_11(alpha)
+	return mu0 + (
+		alpha < alpha0
+		and 5 / (2 * math.log(10)) * (alpha / alpha1) ^ (1 / s1)
+		or 5 / (2 * math.log(10)) * (alpha0 / alpha1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (alpha / alpha0) ^ (1 / s2))
+	)
+end
+
+-- eqn D.12 but as a function of mu:
+local function normrho_for_mu_eqn_D_12_a(mu)
+	return 10 ^ ((-2/5) * (mu - mu0))
+end
+
+-- eqn D12
+-- depends upon s1 and s2 to be defined
+-- and those are only defined for NGC 1560 in Appendix D
+-- why are the labeled equations combining two equations into one?  how do you denote them?
+local function normrho_for_r_z_eq_0_eqn_D_12_a(r)
+	local alpha = alpha_for_r(r)
+	local mu = mu_for_alpha_eqn_D_11(alpha)
+	return normrho_for_mu_eqn_D_12_a(mu)
+end
+local function normrho_for_r_z_eq_0_eqn_D_12_b(r)
+	if r <= r0 then
+		return math.exp(-(r / r1) ^ (1 / s1))
+	end
+	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
+end
+
+
 
 local function mmin_for_r_eqn_6_7(r)
 	local tmp = r + rmax
@@ -683,6 +729,7 @@ end
 -- eqn C.18
 local function dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrho)
 	normrho = normrho or normrho_for_r_z_eq_0_eqn_8_4_a
+	--normrho = normrho or normrho_for_r_z_eq_0_eqn_D_12_a		-- requires alpha1, which isn't defined for NGC 3198, NGC 3115
 	local delta = galacticWidth_for_r_eqn_6_9_based_on_eqn_5_2_b
 	local mmin = mmin_for_r_eqn_6_7(r)
 	local dr_normphi =
@@ -798,37 +845,6 @@ print('r='..r..' β='..beta..' ∂β/∂r='..((beta - oldbeta) / dr))
 
 	local rvec, betavec = matrix(rAndBetaVec):T():unpack()
 	return rvec, betavec
-end
-
--- eqn D11:
--- depends on s1, s2, which we only have for NGC 1560 (right?)
-local function mu_for_alpha_eqn_D_11(alpha)
-	return mu0 + (
-		alpha < alpha0
-		and 5 / (2 * math.log(10)) * (alpha / alpha1) ^ (1 / s1)
-		or 5 / (2 * math.log(10)) * (alpha0 / alpha1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (alpha / alpha0) ^ (1 / s2))
-	)
-end
-
--- eqn D.12 but as a function of mu:
-local function normrho_for_mu_eqn_D_12_a(mu)
-	return 10 ^ ((-2/5) * (mu - mu0))
-end
-
--- eqn D12
--- depends upon s1 and s2 to be defined
--- and those are only defined for NGC 1560 in Appendix D
--- why are the labeled equations combining two equations into one?  how do you denote them?
-local function normrho_for_r_z_eq_0_eqn_D_12_a(r)
-	local alpha = alpha_for_r(r)
-	local mu = mu_for_alpha_eqn_D_11(alpha)
-	return normrho_for_mu_eqn_D_12_a(mu)
-end
-local function normrho_for_r_z_eq_0_eqn_D_12_b(r)
-	if r <= r0 then
-		return math.exp(-(r / r1) ^ (1 / s1))
-	end
-	return math.exp(-(r0 / r1) ^ (1 / s1) * (1 - s2 / s1 + s2 / s1 * (r / r0) ^ (1 / s2)))
 end
 
 -- eqn C.15
@@ -1201,13 +1217,13 @@ local alpha_in_arcsec_1992_Broeils_table_4, v_in_km_per_s_1992_Broeils, v_corr_i
 local r_in_kpc_1992_Broeils_table_4 = alpha_in_arcsec_1992_Broeils_table_4:map(r_for_alpha)
 local beta_corr_1992_Broeils = v_corr_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s
 
--- random fact: this works in 128-bit but not in 64-bit.
+-- random fact: this works in 128-bit but not in 64-bit with n=1000.
 -- chances are the author didn't use 128-bit, so if you're using 64-bit, better pick a smaller step size
+-- to get it working in 64-bit just use n=2000
 if calcRotCurveGraphs then
 	local rvec, betavec = makeRotationCurve(function(r, beta)
 			return dr_beta_for_r_beta_f_g_eqn_5_1(r, beta, f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r))
-		end, 0, lbeta,
-		2000)
+		end, 0, lbeta)
 	gnuplot{
 		terminal = 'svg size 1024,768 background rgb "white"',
 		output = "Fig__1a_NGC_1560_normalized_rotation_curve_eqn_5.3.svg",
@@ -1240,8 +1256,8 @@ if calcRotCurveGraphs then
 		title = 'Rotation velocity of a spheroid',
 		data = {
 			rvec,
-			rvec:map(beta_circ_for_r_eqn_4_14_using_eqn_5_3),
-			betavec,
+			rvec:map(beta_circ_for_r_eqn_4_14_using_eqn_5_3),	-- beta-circular
+			betavec,											-- beta
 			r_in_kpc_1992_Broeils_table_4,
 			beta_corr_1992_Broeils
 			--v_in_km_per_s_1992_Broeils * 1000 / c_in_m_per_s,
@@ -1512,31 +1528,7 @@ alphamax = alpha_for_r(rmax)
 
 rmax_check = rmax_eqn_C_15()	-- rmax_check = 12.2202643935 vs 12.2 ... close
 
-if calcGravPotGraphs then
-	local rvec = xvec * rmax
-	gnuplot{
-		terminal = 'svg size 1024,768 background rgb "white"',
-		output = "Fig__5b_NGC_1560_gravitational_potential.svg",
-		style = 'data lines',
-		xlabel = "r (kpc)",
-		xrange = {rvec[1], rvec[#rvec]},
-		format = {y = '%.2e'},
-		title = 'Gravitatioanl potential of NGC 1560',
-		data = {
-			rvec,
-			--rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
-			rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end),	-- CLOSE
-			rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end),	--
-		},
-		{using='1:2', title='normphi'},
-		{using='1:3', title='d/dr normphi'},
-		{'0', title='', lc='rgb "grey"'},	-- zero line
-	}
-	-- fail
-	-- seems I need a different normphi(r,z) ...
-	-- if I use the old a, b, rs then this has too big of an amplitude
-	-- if I use the new a, b, rs then this has too small of an amplitude
-end
+
 
 -- eqn C5: lambda = 4 pi R0^3 rho0 / (3 M)
 -- checking R0 based on NGC 1560's M, lambda, rho0:
@@ -1554,6 +1546,66 @@ lambda_check = lambda_eqn_4_9_b()	-- lambda_check = 0.13473115517544 vs 0.134 ..
 -- ... so what do we use for NGC 1560?
 r0_check = r_for_alpha(alpha0)		-- r0_check = 2.04058078379 vs 2.04 ... close
 r1 = r_for_alpha(alpha1)
+
+
+--[[
+Section 7:
+	
+	The left-hand graphic in Fig. 4 shows the normalized mass
+	density profile ϱ(r,0) obtained for NGC 1560 (the infor-
+	mation in this figure is the same as displayed in Fig. 3).
+	
+	Now, ϱ(r,0) can be substituted in the equation (C.18) for
+	∂ϕ(r,0)/∂r and used to determine both the functions f(r)
+	and g(r) in Abel’s equation (5.1).
+
+So whatever is used with Fig 4.a for ϱ(r),
+use that in eqn C.18 ... to determine f(r) and g(r) somehow?
+That second sentence would make more sense if it said:
+
+	"Substitute ϱ(r,0) FROM SOMEWHERE (WHERE?!) into equation C.18's definition 
+	of ∂ϕ(r,0)/∂r, then substitute ϱ(r,0) and ∂ϕ(r,0)/∂r into the definitions
+	of f(r) and g(r)"
+
+--]]
+
+-- notice, that figure 5.b explicitly says "a = 7.19, b = 0.567", so it probably goes here and not earlier with the Appendix D numbers
+if true then --calcGravPotGraphs then
+	local rvec = xvec * rmax
+	
+	-- with section 7 #s: has closer to correct magnitude (-9.5e-8 should be -5.9e-7) but is more stretched out than the correct solution
+	-- with appendix D #s: this looks right but is exactly 10x larger than it should be
+	local normphivec = rvec:map(normphi_for_r_z_eq_0_eqn_5_2_a)
+	
+	-- with section 7 #s: shape looks wrong (peak is at r=1 instead of r=0) and magnitude is too high: -1.2e-5
+	-- with appendix D #s: completely wrong, looks like zero.
+	--local normphivec = rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end)
+	
+--	local dr_normphivec = rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end)
+	
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "Fig__5b_NGC_1560_gravitational_potential.svg",
+		style = 'data lines',
+		xlabel = "r (kpc)",
+		xrange = {rvec[1], rvec[#rvec]},
+		format = {y = '%.2e'},
+		title = 'Gravitatioanl potential of NGC 1560',
+		data = {
+			rvec,
+			normphivec,
+			dr_normphivec,
+		},
+		{using='1:2', title='φ'},
+--		{using='1:3', title='∂φ/∂r'},
+		{'0', title='', lc='rgb "grey"'},	-- zero line
+	}
+	-- fail
+	-- seems I need a different normphi(r,z) ...
+	-- if I use the old a, b, rs then this has too big of an amplitude
+	-- if I use the new a, b, rs then this has too small of an amplitude
+end
+
 
 
 local alphavec = xvec * alphae
@@ -1581,11 +1633,15 @@ but it doesn't fit the curve
 maybe cuz the curve was really wrong?
 but the curve is using d.12.a
 does that mean the curve uses another eqn for rho?
+
+Section 7: "The left-hand graphic in Fig. 4 shows the normalized mass
+	density profile (r, 0) obtained for NGC 1560 (the infor-
+	mation in this figure is the same as displayed in Fig. 3)."
+
+Does this mean Fig 3.(ab?) is the same equation as Fig 4.(ab?) but rearranged?
 --]]
--- [[
 local normrho_for_lum_1992_Broeils = luminosity_1992_Broeils:map(normrho_for_mu_eqn_D_12_a)
 normrho_for_lum_1992_Broeils = normrho_for_lum_1992_Broeils / normrho_for_lum_1992_Broeils[1]
---]]
 
 local rvec = makePow10Range(.01, rmax)
 --local normrhovec = rvec:map(normrho_for_r_NGC_1560)		-- works, but isn't provided in the paper
@@ -1626,6 +1682,7 @@ gnuplot{
 	{using='1:2', title='2021 Ludwig'},
 	{using='3:4', title='1992 Broeils', with='points pointtype 7'},
 }
+-- CHECK
 
 
 --[[
@@ -1637,8 +1694,6 @@ Section 7 text beneath Fig 4:
 	Now, ϱ(r, 0) can be substituted in the equation (C18) for
 	∂φ(r, 0)/∂r and used to determine both the functions f(r)
 	and g(r) in Abel’s equation (5.1).
-
-and then you look at C.18, and just give up all hope.
 --]]
 -- [[
 if calcRotCurveGraphs then
@@ -1646,7 +1701,6 @@ if calcRotCurveGraphs then
 	-- the function looks like it is based on S(alpha) of Fig 3.b
 	local rvec, betavec = makeRotationCurve(
 		function(r, beta)
-
 			--local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
 			--local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
 			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
@@ -1849,6 +1903,7 @@ arctan_kspiral_in_deg = math.deg(math.atan(kspiral))
 -- arctan_kspiral_in_deg = 5.7105931374996
 -- theta = math.atan(ksprial) = math.rad(5.71)
 
+--  after eqn 8.5:
 
 rs = 1.20e-5		-- kpc ... or, by eqn C.8, unitless because it is divided by R0 = 1 kpc
 
@@ -1935,6 +1990,7 @@ local normrho_1987_Kent_table_2 = rho_1987_Kent_table_2 / rho_1987_Kent_table_2[
 -- TODO what does this look like with normrho 8.4a?
 local rvec = makePow10Range(.1, lrho)
 local normrhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b)
+print('sup(normrho)', table.sup(normrhovec))
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "Fig__7a_NGC_3198_normalized_mass_density_eqn_5.2b.svg",
@@ -2119,8 +2175,8 @@ if calcGravPotGraphs then	-- because it's so slow
 			rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end),	-- CLOSE
 			rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end),	--
 		},
-		{using='1:2', title='normphi'},
-		{using='1:3', title='d/dr normphi'},
+		{using='1:2', title='φ'},
+		{using='1:3', title='∂φ/∂r'},
 		{'0', title='', lc='rgb "grey"'},	-- zero line
 	}
 	-- if I could match phi(r), then I bet I could match d/dr phi(r)
@@ -2177,6 +2233,7 @@ local function v_for_r(r)
 	-- but for reproducing 2006 Cooperstock et al, return beta*c = v
 	return c_in_m_per_s * sum
 end
+local normvelvec_2006_Cooperstock = rvec:map(v_for_r) / c_in_m_per_s
 gnuplot{
 	terminal = 'svg size 1024,768 background rgb "white"',
 	output = "NGC_3198_normalized_rotation_curve_2006_Cooperstock_Fig_3.svg",
@@ -2187,7 +2244,7 @@ gnuplot{
 	xrange = {0, rmax},
 	data = {
 		rvec,
-		rvec:map(v_for_r) / c_in_m_per_s,
+		normvelvec_2006_Cooperstock,
 		r_in_kpc_1989_Begeman,
 		beta_1989_Begeman,
 	},
@@ -2201,6 +2258,37 @@ but this graph doesnt' look like the 2021 Ludwig paper
 --]]
 
 
+--[[
+ok now that I have a working density graph ... (fig 7a)
+and I have a working velocity curve (2006 Cooperstock)
+... even though I haven't got the 2021 Ludwig paper's rotation curve ...
+here's the ram pressure of the galaxy:
+so 
+TODO once you get velocity curve working, use it here.
+--]]
+do
+	local rhovec = rvec:map(normrho_for_r_z_eq_0_eqn_8_4_b) * rho0	-- make sure this matches Fig 7.a
+	gnuplot{
+		terminal = 'svg size 1024,768 background rgb "white"',
+		output = "NGC_3198_derived_ram_pressure.svg",
+		xlabel = "r (kpc)",
+		ylabel = "P (kg / m s^2)",
+		style = 'data lines',
+		title = 'Ram pressure of NGC 3198',
+		xrange = {0, rmax},
+		log = 'xy',
+		data = {
+			rvec,
+			rvec:size():lambda(function(i)
+				local v_over_c = normvelvec_2006_Cooperstock[i]
+				local v = v_over_c * c_in_m_per_s 
+				local rho = rhovec[i]
+				return v*v*rho 
+			end),
+		},
+		{using='1:2', title='Ram pressure'},
+	}
+end
 
 
 for _,k in ipairs(table.keys(Gstorage)) do Gstorage[k] = nil end
@@ -2606,8 +2694,8 @@ if calcGravPotGraphs then	-- because it's so slow
 			rvec:map(function(r) return normphi_for_r_z_eq_0_eqn_C_17(r) end),
 			rvec:map(function(r) return dr_normphi_for_r_z_eq_0_eqn_C_18(r) end),
 		},
-		{using='1:2', title='normphi'},
-		{using='1:3', title='d/dr normphi'},
+		{using='1:2', title='φ'},
+		{using='1:3', title='∂φ/∂r'},
 		{'0', title='', lc='rgb "grey"'},	-- zero line
 	}
 end
