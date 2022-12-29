@@ -32,7 +32,7 @@ symmath.tostring = symmath.export.SingleLine
 local calcGravPotGraphs = false
 
 -- also goes slow:
-local calcRotCurveGraphs = false
+local calcRotCurveGraphs = true
 
 
 local Gstorage = {}
@@ -447,11 +447,14 @@ timer("deriving root-finding", function()
 	
 
 		local beta = var('β', {r})
+		beta:nameForExporter('Lua', 'beta')
 		local f = var('f', {r})
 		local g = var('g', {r})
 		local rs = var'rs'
 		local normrho = var('ϱ', {r})
+		normrho:nameForExporter('Lua', 'normrho')
 		local normphi = var('φ', {r})
+		normphi:nameForExporter('Lua', 'normphi')
 
 		--eqn 5.1 is derived from the Abel equation 4.13:
 		local eqn_5_1 = ((beta + r * beta:diff(r)) * g):eq(beta * ((beta - r * beta:diff(r)) * beta + f * (1 - beta^2)))
@@ -553,7 +556,7 @@ timer("deriving root-finding", function()
 		
 		dz_eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_6_9_root_expr}, input=argvars}
 	
-		dr_beta_for_r_beta_f_g_eqn_5_1 = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
+		dr_beta_for_r_beta_f_g_eqn_5_1, code = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
 
 		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
 		
