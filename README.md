@@ -1,6 +1,9 @@
-I'm trying to reproduce the graphs in 2021 Ludwig. 
+I'm trying to reproduce the graphs in 2021 Ludwig, "Galactic rotation curve and dark matter according to gravitomagnetism". 
 
 Seems the paper isn't very clear where it gets its graphs from (no explicit description of the rotation curve graph whatsoever) or on what equation the parameters that it lists are used in.
+
+Run the `run.lua` to produce most all the graphs, except any that require lots of iterations for whatever reason.
+For those you'll have to open `run.lua` and enable both `calcGravPotGraphs` and `calcRotCurveGraphs`.
 
 Errors I think I've found:
 * NGC 3115 y0 = 4.0 instead of 0.4 makes the graph look correct.  Especially since NGC 3198 has a value of 8.0, in the same range.
@@ -48,15 +51,15 @@ CHECK:	Fig 4a: NGC 1560 normalized mass density (using eqn D 13)
 
 CHECK:	Fig 4a: NGC 1560 - sampled luminosity from 1992 Broeils
 
-![](Fig__4a_derived_NGC_1560_density.svg)
-
 ![](Fig__4a_NGC_1560_normalized_mass_density_eqn_5.2b.svg)
+
+![](Fig__4a_derived_NGC_1560_density.svg)
 
 TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ... so where do they get it from?)
 
-This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
-
 ![](Fig__4b_NGC_1560_normalized_rotation_curve.svg)
+
+This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
 
 CHECK:	Fig 5a: NGC 1560 galactic width.
 

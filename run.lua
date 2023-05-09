@@ -32,7 +32,7 @@ symmath.tostring = symmath.export.SingleLine
 local calcGravPotGraphs = false
 
 -- also goes slow:
-local calcRotCurveGraphs = true
+local calcRotCurveGraphs = false
 
 
 local Gstorage = {}
@@ -556,7 +556,7 @@ timer("deriving root-finding", function()
 		
 		dz_eqn_6_9_root_expr_based_on_5_2_b = symmath.export.Lua:toFunc{output={dz_eqn_6_9_root_expr}, input=argvars}
 	
-		dr_beta_for_r_beta_f_g_eqn_5_1, code = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
+		dr_beta_for_r_beta_f_g_eqn_5_1 = symmath.export.Lua:toFunc{output={dr_beta_eqn_5_1_expr:rhs()}, input={r, beta, f, g}}
 
 		f_for_r_eqn_5_3 = symmath.export.Lua:toFunc{output={f_z_eq_0_eqn_5_3_expr:rhs()}, input={r}}
 		
@@ -1513,6 +1513,13 @@ print('dSd_dalpha(alphae) = '..dSd_dalpha(alphae)..' should equal 0')
 -- dSd_dalpha(alphae) = 0.49270654394305 should equal 0
 -- FAIL
 
+-- these two FAILs could be a typo, since they are nearly one anothers value.
+-- however it doesn't sound like a typo: after eqn D.15:
+--  "Finally, it is required that the radial derivative of the index
+--   vanishes at the endpoint αe (this requirement is not essential,
+--   but it is convenient to have a flat index in extending the index
+--   beyond the last measurement point)"
+
 
 -- section 7 text:
 lambda = 0.134
@@ -1573,7 +1580,7 @@ That second sentence would make more sense if it said:
 --]]
 
 -- notice, that figure 5.b explicitly says "a = 7.19, b = 0.567", so it probably goes here and not earlier with the Appendix D numbers
-if true then --calcGravPotGraphs then
+if calcGravPotGraphs then
 	local rvec = xvec * rmax
 	
 	-- with section 7 #s: has closer to correct magnitude (-9.5e-8 should be -5.9e-7) but is more stretched out than the correct solution
@@ -1621,6 +1628,7 @@ gnuplot{
 	style = 'data lines',
 	title = 'Sersic index of NGC 1560',
 	xrange = {0, alphae},
+	yrange = {0},
 	data = {alphavec, alphavec:map(s_for_alpha_eqn_D_13)},
 	{using='1:2', title=''},
 }
@@ -1700,13 +1708,372 @@ Section 7 text beneath Fig 4:
 --]]
 -- [[
 if calcRotCurveGraphs then
-	-- [[ this worked for figure 1 ... but no other figures
+	-- this worked for figure 1 ... but no other figures
 	-- the function looks like it is based on S(alpha) of Fig 3.b
+	--[[ lhs is too flat 
 	local rvec, betavec = makeRotationCurve(
 		function(r, beta)
-			--local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
-			--local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ looks like a parabolic curve
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ sine curve from 7 to 10, need 0from 0 to 12
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			return dr_beta_for_r_beta_eqn_4_15(r, beta, 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_for_r_eqn_5_3(r), g_for_r_eqn_5_3(r)
+			)
+		end,
+		0, rmax)
+	--]]
+	
+	--[[ has peak on left
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ also has peak
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ also has peak
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
 			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ also has peak
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+
+-- repeat f & g 4.12 but with dr_beta_for_r_beta_f_g_eqn_4_13
+	--[[ all nan
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ all nan
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ exists for >7 ... while the fit data exists for <7
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ exists for >7 ... while the fit data exists for <7
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+
+-- repeat but with dr_beta_for_r_beta_eqn_4_15
+	--[[ nice smooth curve that doesn't fit
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ does dip on the lhs, but dips too low
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ looks better but wrong scale and offset
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ same, looks better, wrong scale and offset
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eq_0_eqn_C_18(r, normrhofunc)	-- uses root-finding, which is slow
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+
+-- now repeat *ALL* the f_eqn_4_12_a etc except with dr_normphi_for_r_z_eqn_5_2_a
+-- since g_eqn_4_12_b uses dr_normphi
+
+	--[[ lhs flat
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ lhs flat
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ lhs flat but looking closer
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ lhs flat but looking closer
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_5_1(		-- has a big spike (due to f(r)?).  negative looks better but peaked in the wrong place.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+
+-- repeat f & g 4.12 but with dr_beta_for_r_beta_f_g_eqn_4_13
+	--[[ parabolic and no good
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ parabolic still no good
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ parabolic, curve looks close actually but is shifted 2 to the right
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ same as above
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_f_g_eqn_4_13(	-- getting nans
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+
+-- repeat but with dr_beta_for_r_beta_eqn_4_15
+	--[[ upwards slope way off
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ dips too low on the left
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ dips too low
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+	--[[ same as above
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
+			local normrho = normrhofunc(r)
+			local dr_normphi = dr_normphi_for_r_z_eqn_5_2_a(r, 0)
+			return dr_beta_for_r_beta_eqn_4_15( 	-- doesn't integrate across the full domain.  negative just flips it, still fails.
+				r, beta,
+				f_eqn_4_12_a(r, normrho), g_eqn_4_12_b(r, dr_normphi)
+			)
+		end,
+		0, rmax)
+	--]]
+
+
+
+	--[[ old code with toggle comments
+	local rvec, betavec = makeRotationCurve(
+		function(r, beta)
+			local normrhofunc = normrho_for_r_z_eq_0_eqn_5_2_b
+			--local normrhofunc = normrho_for_r_z_eq_0_eqn_8_4_b
+			--local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_a
 			--local normrhofunc = normrho_for_r_z_eq_0_eqn_D_12_b	-- same as D.12a
 
 			local normrho = normrhofunc(r)

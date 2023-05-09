@@ -12,7 +12,7 @@ agm.maxiter = 100
 --[=[ debug -- watching the values
 local ffi = require 'ffi'
 ffi.cdef[[
-typedef union {
+typedef union dl {
 	double d;
 	long l;
 } dl;
