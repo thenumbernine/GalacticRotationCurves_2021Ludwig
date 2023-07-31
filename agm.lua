@@ -19,7 +19,7 @@ typedef union dl {
 ]]
 
 local x = ffi.new'dl'
-require 'ffi.c.stdio'
+local stdio = require 'ffi.req' 'c.stdio'
 --]=]
 
 --[[
