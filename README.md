@@ -59,7 +59,7 @@ TODO:	Fig 4b: NGC 1560 normalized rotation curve (well, it's not the eqn 5.3 ...
 
 ![](Fig__4b_NGC_1560_normalized_rotation_curve.svg)
 
-This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... viola?
+This should be reproducable once the norm mass density and grav pot are done -- then just substitute both into Abel's equation (might not be the same as those provided in eqn 5.2) and ... voila?
 
 CHECK:	Fig 5a: NGC 1560 galactic width.
 
